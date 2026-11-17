@@ -175,7 +175,16 @@ object Backup {
         val uri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI
         val pathCol = if (Build.VERSION.SDK_INT >= 29) MediaStore.Images.Media.RELATIVE_PATH else MediaStore.Images.Media.DATA
         val cols = arrayOf(MediaStore.Images.Media._ID, MediaStore.Images.Media.BUCKET_ID, MediaStore.Images.Media.BUCKET_DISPLAY_NAME, pathCol, MediaStore.Images.Media.DISPLAY_NAME, MediaStore.Images.Media.DATE_MODIFIED)
-        context.contentResolver.query(uri, cols, null, null, null)?.use { c ->
+        // The phone's storage not mounted yet (just after boot: "Volume
+        // external_primary not found"): nothing to scan this time.
+        val cursor = try {
+            context.contentResolver.query(uri, cols, null, null, null)
+        } catch (e: IllegalArgumentException) {
+            null
+        } catch (e: IllegalStateException) {
+            null
+        }
+        cursor?.use { c ->
             while (c.moveToNext()) {
                 val id = c.getLong(0)
                 val folder = c.getString(1) ?: continue

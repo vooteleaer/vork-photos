@@ -4,6 +4,7 @@
 //! The UI thread only draws: everything that can block runs on a thread
 //! and posts a message back.
 
+use std::os::windows::process::CommandExt;
 use std::cell::{Cell, RefCell};
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::sync::atomic::{AtomicIsize, Ordering};
@@ -1043,14 +1044,23 @@ unsafe fn rename_album(owner: HWND) {
     spawn("Renaming the album", move |lib| lib.rename_album(&libs, &name, &to));
 }
 
-/// Announces live in the vØrk storage app: it's opened (the libraries heard of,
-/// to join one, are there).
+/// Announces live in the vØrk dashboard (Storage → Announces): the
+/// dashboard is opened with the link the machine's vØrk node gives
+/// (`vork web-link`); without one, the note says where to find it.
 unsafe fn announces(owner: HWND) {
-    let installed = std::path::PathBuf::from(std::env::var_os("LOCALAPPDATA").unwrap_or_default()).join("Programs").join("vork-storage").join("vork-desktop.exe");
-    let exe = if installed.exists() { installed.display().to_string() } else { "vork-desktop.exe".into() };
-    let r = ShellExecuteW(owner, w!("open"), &wide(&exe), w!("--show"), None, SW_SHOWNORMAL);
-    if r.0 as isize <= 32 {
-        note("The vØrk storage app isn't installed here: its Announces page lists the libraries heard of.");
+    let installed = std::path::PathBuf::from(std::env::var_os("ProgramFiles").unwrap_or_default()).join("vork").join("vork.exe");
+    let exe = if installed.exists() { installed } else { "vork.exe".into() };
+    let link = std::process::Command::new(exe)
+        .arg("web-link")
+        .creation_flags(0x0800_0000) // CREATE_NO_WINDOW
+        .output()
+        .ok()
+        .filter(|o| o.status.success())
+        .and_then(|o| String::from_utf8_lossy(&o.stdout).lines().next().map(str::trim).map(String::from))
+        .filter(|l| l.starts_with("https://"));
+    let opened = link.is_some_and(|l| ShellExecuteW(owner, w!("open"), &wide(&l), None, None, SW_SHOWNORMAL).0 as isize > 32);
+    if !opened {
+        note("Announces are in the vØrk dashboard: Storage → Announces lists the libraries heard of.");
         show_status();
     }
 }

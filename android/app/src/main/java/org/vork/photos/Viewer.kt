@@ -75,7 +75,12 @@ fun Viewer(gallery: Gallery, photos: List<Photo>, start: Int, close: () -> Unit)
     val current = { gallery.photos.firstOrNull { it.ns == photos[pager.currentPage].ns && it.id == photos[pager.currentPage].id } ?: photos[pager.currentPage] }
     Box(Modifier.fillMaxSize().background(Color.Black)) {
         HorizontalPager(state = pager, userScrollEnabled = !zoomed, beyondViewportPageCount = 1, key = { "${photos[it].ns}/${photos[it].id}" }) { page ->
-            Zoomable(photos[page], active = page == pager.currentPage, tap = { chrome = !chrome }, zoomedChanged = { if (page == pager.currentPage) zoomed = it })
+            val shown = photos[page]
+            if (shown.isVideo) {
+                VideoPlayer(shown, active = page == pager.currentPage, chrome = chrome, tap = { chrome = !chrome })
+            } else {
+                Zoomable(shown, active = page == pager.currentPage, tap = { chrome = !chrome }, zoomedChanged = { if (page == pager.currentPage) zoomed = it })
+            }
         }
         if (chrome && photos.isNotEmpty()) {
             val p = current()

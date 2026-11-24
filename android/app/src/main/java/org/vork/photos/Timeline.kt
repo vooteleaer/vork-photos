@@ -196,6 +196,7 @@ fun Thumb(p: Photo, modifier: Modifier) {
     }
     Box(modifier.background(MaterialTheme.colorScheme.surfaceVariant)) {
         image?.let { Image(it.asImageBitmap(), p.title, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()) }
+        if (p.isVideo) VideoBadge(p, Modifier.align(Alignment.BottomEnd))
     }
 }
 
@@ -290,17 +291,41 @@ suspend fun share(context: Context, photos: List<Photo>) {
     val uris = ArrayList<android.net.Uri>()
     for (p in photos) {
         val cap = p.original ?: continue
-        val bytes = core { Core.read(p.ns, cap, Images.MAX_ORIGINAL) } ?: core { p.preview?.let { Core.read(p.ns, it, Images.MAX_ORIGINAL) } } ?: continue
-        val name = p.title.replace('/', '_').ifEmpty { "${p.id}.jpg" }
+        val name = p.title.replace('/', '_').ifEmpty { if (p.isVideo) "${p.id}.mp4" else "${p.id}.jpg" }
         val f = File(dir, name)
-        f.writeBytes(bytes)
+        if (p.isVideo) {
+            // Whole, a piece at a time (never all in memory); its frame is no video.
+            val written = core {
+                runCatching {
+                    f.outputStream().use { out ->
+                        var at = 0L
+                        val total = Photo.size(cap)
+                        while (at < total) {
+                            val piece = Core.readRange(p.ns, cap, at, StorageSource.PIECE) ?: error("not readable now")
+                            if (piece.isEmpty()) break
+                            out.write(piece)
+                            at += piece.size
+                        }
+                    }
+                }.isSuccess
+            }
+            if (!written) continue
+        } else {
+            val bytes = core { Core.read(p.ns, cap, Images.MAX_ORIGINAL) } ?: core { p.preview?.let { Core.read(p.ns, it, Images.MAX_ORIGINAL) } } ?: continue
+            f.writeBytes(bytes)
+        }
         uris += FileProvider.getUriForFile(context, "org.vork.photos.shared", f)
     }
     if (uris.isEmpty()) return
     val intent = if (uris.size == 1) {
-        Intent(Intent.ACTION_SEND).putExtra(Intent.EXTRA_STREAM, uris[0]).setType(photos[0].type.ifEmpty { "image/*" })
+        Intent(Intent.ACTION_SEND).putExtra(Intent.EXTRA_STREAM, uris[0]).setType(photos[0].type.ifEmpty { if (photos[0].isVideo) "video/*" else "image/*" })
     } else {
-        Intent(Intent.ACTION_SEND_MULTIPLE).putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris).setType("image/*")
+        val type = when {
+            photos.all { it.isVideo } -> "video/*"
+            photos.none { it.isVideo } -> "image/*"
+            else -> "*/*"
+        }
+        Intent(Intent.ACTION_SEND_MULTIPLE).putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris).setType(type)
     }
     intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
     context.startActivity(Intent.createChooser(intent, "Share").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))

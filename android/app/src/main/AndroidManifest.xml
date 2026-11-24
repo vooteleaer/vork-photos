@@ -3,6 +3,9 @@
 
     <!-- The pictures taken on this phone, to back them up into a library. -->
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
+    <!-- Whether the network counts (videos back up on Wi-Fi only); no network use of its own. -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
     <!-- Where they were taken (Android hides it from apps without this). -->
     <uses-permission android:name="android.permission.ACCESS_MEDIA_LOCATION" />

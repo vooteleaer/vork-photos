@@ -41,8 +41,8 @@ object Backup {
     /** A folder of pictures on the phone (a MediaStore bucket). */
     data class Folder(val id: String, val name: String, val count: Int, val camera: Boolean)
 
-    /** A picture on the phone. */
-    data class Item(val id: Long, val uri: Uri, val path: String, val modifiedMs: Long, val folder: String)
+    /** A picture or a video on the phone. */
+    data class Item(val id: Long, val uri: Uri, val path: String, val modifiedMs: Long, val folder: String, val video: Boolean = false, val mime: String = "")
 
     var running by mutableStateOf(false)
         private set
@@ -98,8 +98,19 @@ object Backup {
         return context.checkSelfPermission(read) == PackageManager.PERMISSION_GRANTED
     }
 
+    /** Whether videos may be read too (asked with the pictures since Android 13). */
+    private fun videosAllowed(context: Context): Boolean {
+        val read = if (Build.VERSION.SDK_INT >= 33) Manifest.permission.READ_MEDIA_VIDEO else Manifest.permission.READ_EXTERNAL_STORAGE
+        return context.checkSelfPermission(read) == PackageManager.PERMISSION_GRANTED
+    }
+
+    /** Videos are big: backed up only over a network that doesn't count (Wi-Fi). */
+    private fun unmetered(context: Context): Boolean =
+        !context.getSystemService(android.net.ConnectivityManager::class.java).isActiveNetworkMetered
+
     fun permissions(): Array<String> = buildList {
         add(if (Build.VERSION.SDK_INT >= 33) Manifest.permission.READ_MEDIA_IMAGES else Manifest.permission.READ_EXTERNAL_STORAGE)
+        if (Build.VERSION.SDK_INT >= 33) add(Manifest.permission.READ_MEDIA_VIDEO)
         if (Build.VERSION.SDK_INT >= 29) add(Manifest.permission.ACCESS_MEDIA_LOCATION)
     }.toTypedArray()
 
@@ -172,9 +183,14 @@ object Backup {
 
     private fun scan(context: Context, each: (Item, String, String, String) -> Unit) {
         if (!allowed(context)) return
-        val uri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI
-        val pathCol = if (Build.VERSION.SDK_INT >= 29) MediaStore.Images.Media.RELATIVE_PATH else MediaStore.Images.Media.DATA
-        val cols = arrayOf(MediaStore.Images.Media._ID, MediaStore.Images.Media.BUCKET_ID, MediaStore.Images.Media.BUCKET_DISPLAY_NAME, pathCol, MediaStore.Images.Media.DISPLAY_NAME, MediaStore.Images.Media.DATE_MODIFIED)
+        scan(context, MediaStore.Images.Media.EXTERNAL_CONTENT_URI, false, each)
+        if (videosAllowed(context)) scan(context, MediaStore.Video.Media.EXTERNAL_CONTENT_URI, true, each)
+    }
+
+    /** The pictures (or videos) MediaStore lists at `uri`. */
+    private fun scan(context: Context, uri: Uri, video: Boolean, each: (Item, String, String, String) -> Unit) {
+        val pathCol = if (Build.VERSION.SDK_INT >= 29) MediaStore.MediaColumns.RELATIVE_PATH else MediaStore.MediaColumns.DATA
+        val cols = arrayOf(MediaStore.MediaColumns._ID, MediaStore.MediaColumns.BUCKET_ID, MediaStore.MediaColumns.BUCKET_DISPLAY_NAME, pathCol, MediaStore.MediaColumns.DISPLAY_NAME, MediaStore.MediaColumns.DATE_MODIFIED, MediaStore.MediaColumns.MIME_TYPE)
         // The phone's storage not mounted yet (just after boot: "Volume
         // external_primary not found"): nothing to scan this time.
         val cursor = try {
@@ -189,11 +205,11 @@ object Backup {
                 val id = c.getLong(0)
                 val folder = c.getString(1) ?: continue
                 val folderName = c.getString(2) ?: ""
-                val name = c.getString(4) ?: "$id.jpg"
+                val name = c.getString(4) ?: if (video) "$id.mp4" else "$id.jpg"
                 val raw = c.getString(3) ?: ""
                 // Relative to the phone's storage: `DCIM/Camera/IMG_1.jpg`.
                 val path = if (Build.VERSION.SDK_INT >= 29) raw + name else raw.substringAfter("/0/", raw.trimStart('/'))
-                each(Item(id, ContentUris.withAppendedId(uri, id), path, c.getLong(5) * 1000, folder), folder, folderName, path)
+                each(Item(id, ContentUris.withAppendedId(uri, id), path, c.getLong(5) * 1000, folder, video, c.getString(6) ?: ""), folder, folderName, path)
             }
         }
     }
@@ -214,8 +230,14 @@ object Backup {
             val (all, todo) = pending(context)
             var n = 0
             var failed = 0
+            var waiting = 0
+            val wifi = unmetered(context)
             for (item in todo) {
                 if (stop) break
+                if (item.video && !wifi) {
+                    waiting++ // on Wi-Fi
+                    continue
+                }
                 note = "Backing up ${n + 1} of ${todo.size}"
                 val fd = try {
                     val uri = if (Build.VERSION.SDK_INT >= 29 && context.checkSelfPermission(Manifest.permission.ACCESS_MEDIA_LOCATION) == PackageManager.PERMISSION_GRANTED) MediaStore.setRequireOriginal(item.uri) else item.uri
@@ -228,7 +250,13 @@ object Backup {
                     failed++
                     continue
                 }
-                val r = Core.importPhoto(ns, fd, item.path, item.modifiedMs)
+                val r = if (item.video) {
+                    // Its frames, made here (no ffmpeg on a phone): from a descriptor of their own.
+                    val frames = runCatching { context.contentResolver.openFileDescriptor(item.uri, "r")?.use { Frames.thumbnails(it.fileDescriptor) } }.getOrNull()
+                    Core.importVideo(ns, fd, item.path, item.modifiedMs, item.mime, frames?.first, frames?.second)
+                } else {
+                    Core.importPhoto(ns, fd, item.path, item.modifiedMs)
+                }
                 if (r.startsWith("error: ")) {
                     Log.w(TAG, "${item.path}: $r")
                     failed++
@@ -246,6 +274,7 @@ object Backup {
                 VorkStorage.problem != null -> "Waiting for vØrk storage"
                 left == 0 -> "All $all backed up"
                 failed > 0 -> "$left not backed up ($failed failed)"
+                waiting == left -> "$waiting video${if (waiting == 1) "" else "s"} wait for Wi-Fi"
                 else -> "$left left"
             }
             return !stop && VorkStorage.problem != null
@@ -274,6 +303,7 @@ object Backup {
         val job = ComponentName(context, BackupJob::class.java)
         js.schedule(JobInfo.Builder(JOB, job)
             .addTriggerContentUri(JobInfo.TriggerContentUri(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, JobInfo.TriggerContentUri.FLAG_NOTIFY_FOR_DESCENDANTS))
+            .addTriggerContentUri(JobInfo.TriggerContentUri(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, JobInfo.TriggerContentUri.FLAG_NOTIFY_FOR_DESCENDANTS))
             .setTriggerContentUpdateDelay(10_000)
             .setTriggerContentMaxDelay(60_000)
             .setRequiresBatteryNotLow(true)

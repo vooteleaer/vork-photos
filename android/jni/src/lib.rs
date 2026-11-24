@@ -72,6 +72,7 @@ fn photo_json(p: &Photo) -> Value {
         "preview": if thumb { p.block("preview").cloned() } else { None },
         "original": p.blocks.first(),
         "type": p.text("type"),
+        "video": p.is_video(), "duration": p.duration(),
         "details": p.details(), "geo": geo,
         "albums": p.albums(), "cover_of": p.cover_of(),
         "people": p.people().into_iter().map(|(id, _)| id).collect::<Vec<_>>(),
@@ -142,6 +143,32 @@ pub extern "system" fn Java_org_vork_photos_Core_read<'l>(mut env: JNIEnv<'l>, _
         Some(data) => env.byte_array_from_slice(&data).map(JByteArray::into_raw).unwrap_or(std::ptr::null_mut()),
         None => std::ptr::null_mut(),
     }
+}
+
+/// Bytes `offset..offset + len` of block `cap` of a record in `ns` (a
+/// video's, played as it comes), fetching what isn't here; null if it
+/// can't be read now.
+#[no_mangle]
+pub extern "system" fn Java_org_vork_photos_Core_readRange<'l>(mut env: JNIEnv<'l>, _: JClass<'l>, ns: JString<'l>, cap: JString<'l>, offset: jlong, len: jlong) -> jbyteArray {
+    let (ns, cap) = (arg(&mut env, &ns), arg(&mut env, &cap));
+    match with(|l| l.read_range(&ns, &cap, offset.max(0) as u64, len.max(0) as u64)) {
+        Some(data) => env.byte_array_from_slice(&data).map(JByteArray::into_raw).unwrap_or(std::ptr::null_mut()),
+        None => std::ptr::null_mut(),
+    }
+}
+
+/// Imports the video open at `fd` (owned from now on) into `ns`, a piece at
+/// a time, with frames of it (`thumb`, `preview`: JPEG, or null): its record
+/// ID, or "error: …".
+#[no_mangle]
+pub extern "system" fn Java_org_vork_photos_Core_importVideo<'l>(mut env: JNIEnv<'l>, _: JClass<'l>, ns: JString<'l>, fd: jint, path: JString<'l>, mtime_ms: jlong, mime: JString<'l>, thumb: JByteArray<'l>, preview: JByteArray<'l>) -> jstring {
+    let (ns, path, mime) = (arg(&mut env, &ns), arg(&mut env, &path), arg(&mut env, &mime));
+    let bytes = |env: &mut JNIEnv, a: &JByteArray| if a.is_null() { None } else { env.convert_byte_array(a).ok() };
+    let (thumb, preview) = (bytes(&mut env, &thumb), bytes(&mut env, &preview));
+    // SAFETY: Kotlin detached the descriptor for us.
+    let file = unsafe { std::fs::File::from_raw_fd(fd) };
+    let r = with(|l| l.import_video(&ns, file, &path, mtime_ms, &mime, thumb, preview)).unwrap_or_else(|e| format!("error: {e}"));
+    out(&mut env, r)
 }
 
 /// Imports the picture open at `fd` (owned from now on) into `ns`: its record ID, or "error: …".

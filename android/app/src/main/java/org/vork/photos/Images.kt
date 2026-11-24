@@ -28,6 +28,10 @@ data class Photo(
     val albums: List<String>,
     /** The albums it's the cover of. */
     val coverOf: List<String> = emptyList(),
+    /** A video, not a picture. */
+    val isVideo: Boolean = false,
+    /** How long a video plays, in seconds. */
+    val durationS: Long? = null,
 ) {
     fun inAlbum(name: String) = albums.any { it.equals(name, ignoreCase = true) }
 
@@ -57,6 +61,8 @@ data class Photo(
                 geo = if (geo != null && geo.length() == 2) geo.getDouble(0) to geo.getDouble(1) else null,
                 albums = (0 until albums.length()).map { albums.getString(it) },
                 coverOf = (0 until coverOf.length()).map { coverOf.getString(it) },
+                isVideo = j.optBoolean("video"),
+                durationS = if (j.isNull("duration")) null else j.optLong("duration"),
             )
         }
 
@@ -123,8 +129,16 @@ object Images {
         return bitmap
     }
 
-    /** The smallest picture of `p` that fills `side` pixels: thumb, preview, else the original. */
+    /**
+     * The smallest picture of `p` that fills `side` pixels: thumb, preview,
+     * else the original; a video's frames (its content is no picture), else
+     * a frame read from it here.
+     */
     suspend fun best(p: Photo, side: Int): Bitmap? {
+        if (p.isVideo) {
+            for (cap in listOfNotNull(p.thumb.takeIf { side <= 400 }, p.preview, p.thumb).distinct()) load(p.ns, cap, side)?.let { return it }
+            return Frames.of(p, side)
+        }
         val caps = listOfNotNull(p.thumb.takeIf { side <= 400 }, p.preview.takeIf { side <= 1800 }, p.original, p.preview, p.thumb)
         for (cap in caps.distinct()) load(p.ns, cap, side)?.let { return it }
         return null

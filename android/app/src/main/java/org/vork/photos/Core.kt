@@ -21,6 +21,10 @@ object Core {
     external fun photos(libraries: String): String
     /** Block `cap` of a record in `ns` if at most `max` bytes, else null. */
     external fun read(ns: String, cap: String, max: Long): ByteArray?
+    /** Bytes `offset..offset + len` of block `cap` of a record in `ns` (a video played as it comes), or null. */
+    external fun readRange(ns: String, cap: String, offset: Long, len: Long): ByteArray?
+    /** Imports the video open at `fd` (owned by the core from now on) a piece at a time, with its frames (JPEG, or null): its record ID, or "error: …". */
+    external fun importVideo(ns: String, fd: Int, path: String, mtimeMs: Long, mime: String, thumb: ByteArray?, preview: ByteArray?): String
     /** Imports the picture open at `fd` (owned by the core from now on): its record ID, or "error: …". */
     external fun importPhoto(ns: String, fd: Int, path: String, mtimeMs: Long): String
     /** `photos`: a JSON array of `{ns, id}`. */

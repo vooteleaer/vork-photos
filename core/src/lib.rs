@@ -69,18 +69,37 @@ impl Photo {
         matches!(self.attrs.get("favorite"), Some(AttrValue::Bool(true)))
     }
 
-    /// The block for `role` (`thumb`, `preview`; ADR-0026), else the content.
+    /// The block for `role` (`thumb`, `preview`; ADR-0026), else the
+    /// content; a video's content is no picture, so a video without one has
+    /// none.
     pub fn block(&self, role: &str) -> Option<&String> {
         let i = match self.attrs.get(&format!("block:{role}")) {
             Some(AttrValue::Int(i)) if *i > 0 => *i as usize,
             _ => 0,
         };
+        if self.is_video() && self.blocks.get(i).is_none_or(|_| i == 0) {
+            return None;
+        }
         self.blocks.get(i).or_else(|| self.blocks.first())
     }
 
     /// Whether it has a small image of its own (else its whole content is shown).
     pub fn has_thumb(&self) -> bool {
         matches!(self.attrs.get("block:thumb"), Some(AttrValue::Int(i)) if (*i as usize) < self.blocks.len() && *i > 0)
+    }
+
+    /// A video (`type` video/…), not a picture.
+    pub fn is_video(&self) -> bool {
+        self.text("type").is_some_and(|t| t.starts_with("video/")) || self.text("mime").is_some_and(|t| t.starts_with("video/"))
+    }
+
+    /// How long it plays, in seconds (a video's, as the extractor read it).
+    pub fn duration(&self) -> Option<i64> {
+        match self.attrs.get("duration") {
+            Some(AttrValue::Int(s)) => Some(*s),
+            Some(AttrValue::Float(s)) => Some(s.round() as i64),
+            _ => None,
+        }
     }
 
     /// The albums it's in, by name.
@@ -302,7 +321,7 @@ impl Library {
         }
     }
 
-    /// Every picture in `libraries`, newest first.
+    /// Every picture and video in `libraries`, newest first.
     pub fn photos(&self, libraries: &[String]) -> Result<Vec<Photo>, String> {
         let mut c = self.client()?;
         let mut out: Vec<Photo> = Vec::new();
@@ -310,8 +329,8 @@ impl Library {
             if let Err(e) = self.move_old_albums(&mut c, ns) {
                 eprintln!("vork-photos: {ns}: moving albums: {e}");
             }
-            // Image types (ADR-0025), and the words used before.
-            for term in ["type^=image/", "type=image", "type=photo"] {
+            // Image and video types (ADR-0025), and the words used before.
+            for term in ["type^=image/", "type^=video/", "type=image", "type=photo"] {
                 out.extend(self.query(&mut c, ns, term.into()).iter().filter(|r| !r.blocks.is_empty()).map(|r| Photo::from_record(ns, r)));
             }
         }
@@ -336,6 +355,85 @@ impl Library {
             Ok(Response::Range { data }) => Some(data),
             _ => None,
         }
+    }
+
+    /// Bytes `offset..offset + len` of block `cap` of a record in `ns`
+    /// (clamped to its end), fetching what isn't here: a video played as it
+    /// comes. None if it can't be read now.
+    pub fn read_range(&self, ns: &str, cap: &str, offset: u64, len: u64) -> Option<Vec<u8>> {
+        let mut c = self.client().ok()?;
+        match self.call(&mut c, Request::ReadRange { cap: cap.into(), ns: Some(ns.into()), offset, len, wait_ms: 30_000 }) {
+            Ok(Response::Range { data }) => Some(data),
+            _ => None,
+        }
+    }
+
+    /// A video taken here, into library `ns`, as [`Library::import`] a
+    /// picture, but never whole in memory: its content is written a piece at
+    /// a time. `mime` is its type as the phone knows it; `thumb` and
+    /// `preview` are frames of it as JPEG (the phone makes them: no ffmpeg
+    /// there), if any. Its record ID.
+    pub fn import_video(&self, ns: &str, mut file: std::fs::File, path: &str, mtime_ms: i64, mime: &str, thumb: Option<Vec<u8>>, preview: Option<Vec<u8>>) -> Result<String, String> {
+        use std::io::Read;
+        use vork_extract::{extract, marker, MARKER};
+        let size = file.metadata().map_err(|e| e.to_string())?.len();
+        let name = path.rsplit('/').next().unwrap_or(path).to_string();
+        let found = extract(&mut file, size, Some(&name));
+        let mut attrs = found.attrs.clone();
+        let mime = attrs
+            .iter()
+            .find(|(k, _)| k == "mime")
+            .and_then(|(_, v)| if let AttrValue::Str(m) = v { Some(m.clone()) } else { None })
+            .filter(|m| m.starts_with("video/"))
+            .unwrap_or_else(|| if mime.starts_with("video/") { mime.to_string() } else { "video/mp4".into() });
+        attrs.retain(|(k, _)| k != "type");
+        attrs.push(("type".into(), AttrValue::Str(mime)));
+        attrs.push(("path".into(), AttrValue::Str(path.into())));
+        attrs.push(("mtime".into(), AttrValue::Int(mtime_ms)));
+        let mut c = self.client()?;
+        let id = match self.call(&mut c, Request::RecordCreate { ns: ns.into(), attrs, data: None })? {
+            Response::Records { records } => records.first().map(|r| r.id.clone()).ok_or("nothing made")?,
+            other => return Err(format!("unexpected answer: {other:?}")),
+        };
+        // The content, a piece at a time.
+        let session = match self.call(&mut c, Request::WriteBegin { ns: ns.into(), id: id.clone(), truncate: true })? {
+            Response::Session { session, .. } => session,
+            other => return Err(format!("unexpected answer: {other:?}")),
+        };
+        use std::io::{Seek, SeekFrom};
+        file.seek(SeekFrom::Start(0)).map_err(|e| e.to_string())?;
+        let mut piece = vec![0u8; 4 << 20];
+        let mut offset = 0u64;
+        loop {
+            let n = file.read(&mut piece).map_err(|e| e.to_string())?;
+            if n == 0 {
+                break;
+            }
+            if let Err(e) = self.call(&mut c, Request::WriteAt { session, offset, data: piece[..n].to_vec() }) {
+                let _ = self.call(&mut c, Request::WriteAbort { session });
+                return Err(e);
+            }
+            offset += n as u64;
+        }
+        let content = match self.call(&mut c, Request::WriteCommit { session, attrs: vec![("mtime".into(), AttrValue::Int(mtime_ms))] })? {
+            Response::Records { records } => records.first().and_then(|r| r.blocks.first().cloned()).ok_or("no content stored")?,
+            other => return Err(format!("unexpected answer: {other:?}")),
+        };
+        // Its frames as thumbnails (ADR-0026), and marked described.
+        let mut set = vec![(MARKER.to_string(), AttrValue::Str(marker(&content)))];
+        let mut blocks = vec![content];
+        if let (Some(thumb), Some(preview)) = (thumb, preview) {
+            for data in [thumb, preview] {
+                match self.call(&mut c, Request::Put { data, public: false, compress: false, publish: false, record: None })? {
+                    Response::Put { cap } => blocks.push(cap),
+                    other => return Err(format!("unexpected answer: {other:?}")),
+                }
+            }
+            set.push(("block:thumb".into(), AttrValue::Int(1)));
+            set.push(("block:preview".into(), AttrValue::Int(2)));
+        }
+        self.call(&mut c, Request::Transaction { ns: ns.into(), steps: vec![TxStep::Set { id: id.clone(), attrs: set, unset: vec![], data: None, blocks: Some(blocks) }] })?;
+        Ok(id)
     }
 
     /// A picture taken here, into library `ns` (a phone's camera roll, as
@@ -684,6 +782,20 @@ mod tests {
         let p = photo(&[("block:thumb", AttrValue::Int(1))], 1);
         assert_eq!(p.block("thumb").unwrap(), "cap0");
         assert!(!p.has_thumb());
+    }
+
+    #[test]
+    fn videos() {
+        let s = |v: &str| AttrValue::Str(v.into());
+        // A frame of it: shown; none: no picture (its content is a video).
+        let v = photo(&[("type", s("video/mp4")), ("duration", AttrValue::Int(83)), ("block:thumb", AttrValue::Int(1)), ("block:preview", AttrValue::Int(2))], 3);
+        assert!(v.is_video());
+        assert_eq!(v.duration(), Some(83));
+        assert_eq!(v.block("thumb").unwrap(), "cap1");
+        let v = photo(&[("type", s("video/mp4"))], 1);
+        assert_eq!(v.block("thumb"), None);
+        assert_eq!(v.block("preview"), None);
+        assert!(!photo(&[("type", s("image/jpeg"))], 1).is_video());
     }
 
     #[test]

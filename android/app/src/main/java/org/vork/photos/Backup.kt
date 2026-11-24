@@ -104,9 +104,25 @@ object Backup {
         return context.checkSelfPermission(read) == PackageManager.PERMISSION_GRANTED
     }
 
-    /** Videos are big: backed up only over a network that doesn't count (Wi-Fi). */
-    private fun unmetered(context: Context): Boolean =
-        !context.getSystemService(android.net.ConnectivityManager::class.java).isActiveNetworkMetered
+    /**
+     * Videos are big: backed up only over a network that doesn't count
+     * (Wi-Fi). Through a VPN (vØrk's), the network under it decides: a VPN
+     * that doesn't say otherwise counts as metered on any network.
+     */
+    private fun unmetered(context: Context): Boolean {
+        val cm = context.getSystemService(android.net.ConnectivityManager::class.java)
+        if (!cm.isActiveNetworkMetered) return true
+        val active = cm.activeNetwork?.let { cm.getNetworkCapabilities(it) } ?: return false
+        if (!active.hasTransport(android.net.NetworkCapabilities.TRANSPORT_VPN)) return false
+        return cm.allNetworks.any { n ->
+            val c = cm.getNetworkCapabilities(n) ?: return@any false
+            !c.hasTransport(android.net.NetworkCapabilities.TRANSPORT_VPN) &&
+                c.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
+                c.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_VALIDATED) &&
+                c.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_NOT_METERED) &&
+                (c.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI) || c.hasTransport(android.net.NetworkCapabilities.TRANSPORT_ETHERNET))
+        }
+    }
 
     fun permissions(): Array<String> = buildList {
         add(if (Build.VERSION.SDK_INT >= 33) Manifest.permission.READ_MEDIA_IMAGES else Manifest.permission.READ_EXTERNAL_STORAGE)

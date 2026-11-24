@@ -13,6 +13,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -177,6 +178,8 @@ fun VideoPlayer(p: Photo, active: Boolean, chrome: Boolean, tap: () -> Unit) {
     var failed by remember { mutableStateOf(false) }
     var position by remember { mutableFloatStateOf(0f) }
     var length by remember { mutableFloatStateOf(1f) }
+    // Width over height as it plays (turned as it says): the picture keeps it.
+    var ratio by remember { mutableFloatStateOf(0f) }
     val poster by androidx.compose.runtime.produceState<Bitmap?>(null, p.ns, p.id) { value = Images.best(p, 1800) }
 
     // A player while the page is shown, with the surface it draws on.
@@ -195,6 +198,7 @@ fun VideoPlayer(p: Photo, active: Boolean, chrome: Boolean, tap: () -> Unit) {
             playing = true
         }
         mp.setOnCompletionListener { playing = false }
+        mp.setOnVideoSizeChangedListener { _, w, h -> if (w > 0 && h > 0) ratio = w.toFloat() / h }
         mp.setOnErrorListener { _, _, _ -> failed = true; playing = false; true }
         try {
             mp.setDataSource(StorageSource(p.ns, cap))
@@ -238,7 +242,8 @@ fun VideoPlayer(p: Photo, active: Boolean, chrome: Boolean, tap: () -> Unit) {
                     }
                 }
             },
-            modifier = Modifier.fillMaxSize(),
+            // As big as fits, its own shape (not stretched to the screen's).
+            modifier = if (ratio > 0f) Modifier.aspectRatio(ratio) else Modifier.fillMaxSize(),
         )
         // Before it plays: its frame, and that it's coming.
         if (!prepared) {

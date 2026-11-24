@@ -1,4 +1,4 @@
-//! retifs Photos for Linux: native GTK 4 / libadwaita over the shared core.
+//! vØrk Photos for Linux: native GTK 4 / libadwaita over the shared core.
 //! A timeline of every picture by month, favourites, albums and people (the
 //! user's contacts); a viewer with what's known of a photo, where it can be
 //! made a favourite, put in albums, and have people tagged, from contacts
@@ -12,10 +12,10 @@ use std::sync::Arc;
 
 use adw::prelude::*;
 use gtk::{gdk, gio, glib};
-use retifs_photos_core::{albums_of, Album, Library, Person, Photo};
+use vork_photos_core::{albums_of, Album, Library, Person, Photo};
 
 fn main() -> glib::ExitCode {
-    let app = adw::Application::builder().application_id("org.retifs.Photos").build();
+    let app = adw::Application::builder().application_id("org.vork.Photos").build();
     app.connect_activate(build);
     app.run()
 }
@@ -140,7 +140,7 @@ fn build(gapp: &adw::Application) {
     window.present();
 }
 
-/// Reloads when a library shown changes: retifsd says so the moment it
+/// Reloads when a library shown changes: vorkd says so the moment it
 /// does (`Library::wait_change`), waited for on a `Library` of its own so
 /// nothing else is held up meanwhile.
 fn watch_changes(me: &Rc<App>, watcher: Arc<Library>, mut known: HashMap<String, u64>) {
@@ -187,7 +187,7 @@ fn reload(me: &Rc<App>, first: bool) {
             Ok(p) => *me2.photos.borrow_mut() = p,
             Err(e) => {
                 me2.photos.borrow_mut().clear();
-                me2.status.set_text(&format!("retifsd isn't answering: {e}"));
+                me2.status.set_text(&format!("vorkd isn't answering: {e}"));
             }
         }
         *me2.albums.borrow_mut() = albums;
@@ -300,7 +300,7 @@ fn show_grid(me: &Rc<App>) {
         View::Person(p) => p.name.clone(),
     };
     me.grid_page.set_title(&title);
-    if !me.status.text().starts_with("retifsd") {
+    if !me.status.text().starts_with("vorkd") {
         me.status.set_text(&format!("{} photo(s)", photos.len()));
     }
     if photos.is_empty() {
@@ -621,9 +621,9 @@ fn ask_new_person(me: &Rc<App>, p: &Photo) {
     });
 }
 
-/// RETIFS_PHOTOS_VIEW=favorites|album:<name>|person:<name>, RETIFS_PHOTOS_OPEN=<n>: on start (demos).
+/// VORK_PHOTOS_VIEW=favorites|album:<name>|person:<name>, VORK_PHOTOS_OPEN=<n>: on start (demos).
 fn open_on_start(me: &Rc<App>) {
-    if let Ok(v) = std::env::var("RETIFS_PHOTOS_VIEW") {
+    if let Ok(v) = std::env::var("VORK_PHOTOS_VIEW") {
         let view = if v == "favorites" {
             Some(View::Favorites)
         } else if let Some(name) = v.strip_prefix("album:") {
@@ -639,15 +639,15 @@ fn open_on_start(me: &Rc<App>) {
             show_grid(me);
         }
     }
-    if let Some(i) = std::env::var("RETIFS_PHOTOS_OPEN").ok().and_then(|s| s.parse().ok()) {
+    if let Some(i) = std::env::var("VORK_PHOTOS_OPEN").ok().and_then(|s| s.parse().ok()) {
         let me2 = me.clone();
         glib::timeout_add_seconds_local_once(3, move || open_viewer(&me2, i));
     }
 }
 
-/// RETIFS_PHOTOS_SNAPSHOT=<file.png>: the window drawn to a file every 2 s.
+/// VORK_PHOTOS_SNAPSHOT=<file.png>: the window drawn to a file every 2 s.
 fn snapshot_on_request(window: &adw::ApplicationWindow) {
-    let Ok(path) = std::env::var("RETIFS_PHOTOS_SNAPSHOT") else { return };
+    let Ok(path) = std::env::var("VORK_PHOTOS_SNAPSHOT") else { return };
     let window = window.clone();
     glib::timeout_add_seconds_local(2, move || {
         let paintable = gtk::WidgetPaintable::new(Some(&window));

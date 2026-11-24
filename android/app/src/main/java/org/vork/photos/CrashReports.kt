@@ -1,4 +1,4 @@
-package org.retifs.photos
+package org.vork.photos
 
 import android.app.ActivityManager
 import android.app.ApplicationExitInfo
@@ -7,27 +7,27 @@ import android.os.Build
 import java.io.File
 
 /**
- * Crash and trouble reports (retifs ADR-0036): this app's crashes go to
- * retifs, which keeps them in the user's crash library (`retifs-crashlogs`,
+ * Crash and trouble reports (vØrk storage ADR-0036): this app's crashes go to
+ * vØrk storage, which keeps them in the user's crash library (`vork-crashlogs`,
  * once the device is in it).
  *
  * A crash is written to this app's files at once (the process is ending)
  * and sent on the next start, with what Android recorded about other ends
  * of this app: native crashes, ANRs, being killed while in use.
  *
- * The same file is in every retifs Android app; only the package differs.
+ * The same file is in every vØrk storage Android app; only the package differs.
  */
 object CrashReports {
     private lateinit var dir: File
     private lateinit var header: String
     private const val KEEP = 50
-    /** A report's text at most (retifsd takes up to 256 KiB). */
+    /** A report's text at most (vorkd takes up to 256 KiB). */
     private const val MAX_TEXT = 200_000
 
     /**
      * Call once at start, after the core can connect. [nativeDir] gives the
      * core the folder (and header) its own panics are written to; [send]
-     * hands a report (kind, source, text) to retifs: true once it took it.
+     * hands a report (kind, source, text) to vØrk storage: true once it took it.
      */
     fun install(context: Context, nativeDir: (String, String) -> Unit, send: (String, String, String) -> Boolean) {
         val app = context.applicationContext
@@ -100,7 +100,7 @@ object CrashReports {
         }
     }
 
-    /** The waiting reports to retifs, oldest first; kept if it can't take them now. */
+    /** The waiting reports to vØrk storage, oldest first; kept if it can't take them now. */
     private fun deliver(context: Context, send: (String, String, String) -> Boolean) {
         val files = dir.listFiles { f -> f.name.endsWith(".txt") }?.sortedBy { it.name } ?: return
         files.dropLast(KEEP).forEach { it.delete() }

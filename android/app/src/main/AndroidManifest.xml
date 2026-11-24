@@ -11,10 +11,10 @@
     <!-- Backing up after a restart (the system forgets some jobs). -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
-    <!-- retifs itself: this app's connections come from its access service. -->
+    <!-- vØrk storage itself: this app's connections come from its access service. -->
     <queries>
-        <package android:name="org.retifs.desktop" />
-        <package android:name="org.retifs.map" />
+        <package android:name="org.vork.storage" />
+        <package android:name="org.vork.map" />
     </queries>
 
     <application
@@ -51,7 +51,7 @@
 
         <provider
             android:name="androidx.core.content.FileProvider"
-            android:authorities="org.retifs.photos.shared"
+            android:authorities="org.vork.photos.shared"
             android:exported="false"
             android:grantUriPermissions="true">
             <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/shared" />

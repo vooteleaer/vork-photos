@@ -1,4 +1,4 @@
-package org.retifs.photos
+package org.vork.photos
 
 import android.content.Context
 import android.content.Intent
@@ -294,7 +294,7 @@ suspend fun share(context: Context, photos: List<Photo>) {
         val name = p.title.replace('/', '_').ifEmpty { "${p.id}.jpg" }
         val f = File(dir, name)
         f.writeBytes(bytes)
-        uris += FileProvider.getUriForFile(context, "org.retifs.photos.shared", f)
+        uris += FileProvider.getUriForFile(context, "org.vork.photos.shared", f)
     }
     if (uris.isEmpty()) return
     val intent = if (uris.size == 1) {

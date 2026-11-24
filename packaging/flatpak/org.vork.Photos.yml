@@ -1,0 +1,53 @@
+# org.vork.Photos: the GTK app only. It uses whichever vorkd runs on this computer
+# (the vork-storage .deb's), through the shared store's socket. Build it with
+# build.sh next to this: it stages the sources this names (src/…) beside a
+# copy of this file.
+id: org.vork.Photos
+runtime: org.gnome.Platform
+runtime-version: '50'
+sdk: org.gnome.Sdk
+sdk-extensions:
+  - org.freedesktop.Sdk.Extension.rust-stable
+command: vork-photos
+finish-args:
+  - --share=network
+  - --share=ipc
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --device=dri
+  # The one store every vØrk storage Flatpak and the host's vorkd share (its
+  # socket is there).
+  - --filesystem=xdg-data/vork-storage:create
+build-options:
+  append-path: /usr/lib/sdk/rust-stable/bin
+  # cargo fetches the crates (local bundles; no vendoring).
+  build-args:
+    - --share=network
+  env:
+    CARGO_HOME: /run/build/vork-photos/cargo
+modules:
+  - name: vork-photos
+    buildsystem: simple
+    sources:
+      - type: dir
+        path: src/vork
+        dest: vork
+      - type: dir
+        path: src/vork-photos
+        dest: vork-photos
+      # The store set (inside a Flatpak XDG_DATA_HOME is the app's own),
+      # then the program.
+      - type: script
+        dest-filename: wrapper
+        commands:
+          - ': "${VORK_STORE:=$HOME/.local/share/vork-storage}"'
+          - export VORK_STORE
+          - exec /app/libexec/vork-photos "$@"
+    build-commands:
+      - cargo build --release --locked --manifest-path vork-photos/Cargo.toml -p vork-photos-gtk
+      - install -Dm755 vork-photos/target/release/vork-photos /app/libexec/vork-photos
+      - install -Dm755 wrapper /app/bin/vork-photos
+      - install -Dm644 vork-photos/packaging/org.vork.Photos.desktop -t /app/share/applications
+      - install -Dm644 vork-photos/packaging/org.vork.Photos.svg -t /app/share/icons/hicolor/scalable/apps
+      - install -Dm644 vork-photos/packaging/flatpak/org.vork.Photos.metainfo.xml -t /app/share/metainfo
+      - install -Dm644 vork-photos/LICENSE -t /app/share/licenses/org.vork.Photos

@@ -1,4 +1,4 @@
-package org.retifs.photos
+package org.vork.photos
 
 import android.app.Application
 import android.content.ComponentName
@@ -16,15 +16,15 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
 /**
- * retifs, which this app uses through the retifs app: its sockets are in
+ * vØrk storage, which this app uses through the vØrk storage app: its sockets are in
  * that app's files, so it connects for this one and hands the connection
  * over (its access service), once the user has let this app in to the
  * libraries chosen there. The core asks for each connection through
  * [connect].
  */
-object Retifs {
-    const val PACKAGE = "org.retifs.desktop"
-    private const val DESCRIPTOR = "org.retifs.IAccess"
+object VorkStorage {
+    const val PACKAGE = "org.vork.storage"
+    private const val DESCRIPTOR = "org.vork.IAccess"
     private const val OPEN = IBinder.FIRST_CALL_TRANSACTION
 
     enum class Problem { NOT_INSTALLED, NOT_LET_IN, NOT_RUNNING }
@@ -39,7 +39,7 @@ object Retifs {
 
     fun start(context: Context) {
         this.context = context.applicationContext
-        Core.init(Retifs::class.java)
+        Core.init(VorkStorage::class.java)
     }
 
     private val connection = object : ServiceConnection {
@@ -65,7 +65,7 @@ object Retifs {
         binder?.takeIf { it.isBinderAlive }?.let { return it }
         val latch = bound ?: CountDownLatch(1).also {
             bound = it
-            val intent = Intent("org.retifs.action.ACCESS").setPackage(PACKAGE)
+            val intent = Intent("org.vork.storage.action.ACCESS").setPackage(PACKAGE)
             if (!context.bindService(intent, connection, Context.BIND_AUTO_CREATE)) {
                 bound = null
                 return null
@@ -75,7 +75,7 @@ object Retifs {
         return binder
     }
 
-    /** A connection to retifsd for the core: a descriptor it owns, or -1. */
+    /** A connection to vorkd for the core: a descriptor it owns, or -1. */
     @JvmStatic
     fun connect(): Int {
         val b = service() ?: run {
@@ -111,21 +111,21 @@ object Retifs {
         }
     }
 
-    /** Asks the user (in the retifs app) to let this app in, or change what it has. */
-    fun letIn(): Intent = Intent("org.retifs.action.LET_IN")
+    /** Asks the user (in the vØrk storage app) to let this app in, or change what it has. */
+    fun letIn(): Intent = Intent("org.vork.storage.action.LET_IN")
         .setPackage(PACKAGE)
         .putExtra("for", "photos")
         .putExtra("write", true)
         .putExtra("why", "Photos shows the pictures in your libraries, and backs up the ones taken on this phone into one of them.")
 
-    /** The retifs app itself (its Announces, joining, settings). */
+    /** The vØrk storage app itself (its Announces, joining, settings). */
     fun open(context: Context): Intent? = context.packageManager.getLaunchIntentForPackage(PACKAGE)
 }
 
 class PhotosApp : Application() {
     override fun onCreate() {
         super.onCreate()
-        Retifs.start(this)
+        VorkStorage.start(this)
         CrashReports.install(this, Core::crashDir, Core::crashReport)
         Backup.schedule(this)
     }

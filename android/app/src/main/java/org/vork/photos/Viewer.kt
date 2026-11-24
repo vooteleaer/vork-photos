@@ -1,4 +1,4 @@
-package org.retifs.photos
+package org.vork.photos
 
 import android.content.Intent
 import android.graphics.Bitmap
@@ -127,8 +127,8 @@ fun Viewer(gallery: Gallery, photos: List<Photo>, start: Int, close: () -> Unit)
     }
 }
 
-/** retifs' map app (shows a place it's handed as a geo: link). */
-const val MAP_APP = "org.retifs.map"
+/** vØrk storage's map app (shows a place it's handed as a geo: link). */
+const val MAP_APP = "org.vork.map"
 
 /** A picture that zooms: its preview first, the original once zoomed in. */
 @Composable

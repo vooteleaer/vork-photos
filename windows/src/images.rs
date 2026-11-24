@@ -1,4 +1,4 @@
-//! Pictures: read from retifsd and decoded with WIC on worker threads, then
+//! Pictures: read from vorkd and decoded with WIC on worker threads, then
 //! handed to the UI thread as premultiplied BGRA pixels (what Direct2D
 //! takes as they are). Thumbnails come from a few long-lived workers fed
 //! by what the grid shows now; the viewer's larger pictures from a thread each.
@@ -6,7 +6,7 @@
 use std::cell::RefCell;
 use std::sync::{Condvar, Mutex};
 
-use retifs_photos_core::Library;
+use vork_photos_core::Library;
 use windows::core::GUID;
 use windows::Win32::Graphics::Imaging::*;
 use windows::Win32::System::Com::*;

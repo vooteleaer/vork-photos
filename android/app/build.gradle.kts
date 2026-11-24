@@ -4,7 +4,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
-// The version (retifs docs/versioning.md): the workspace's, a release's when
+// The version (vork docs/storage/versioning.md): the workspace's, a release's when
 // this commit is tagged with it, else a build towards it; the commit count is
 // the versionCode, so each build installs over the one before.
 val repo = rootProject.projectDir.parentFile
@@ -18,11 +18,11 @@ val commits = git("rev-list", "--count", "HEAD").toIntOrNull() ?: 1
 val released = git("describe", "--exact-match", "--tags", "HEAD") == "v$workspaceVersion"
 
 android {
-    namespace = "org.retifs.photos"
+    namespace = "org.vork.photos"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "org.retifs.photos"
+        applicationId = "org.vork.photos"
         minSdk = 26
         targetSdk = 34
         versionCode = commits

@@ -10,8 +10,8 @@ use std::sync::atomic::{AtomicIsize, Ordering};
 use std::sync::{Condvar, Mutex};
 use std::time::Duration;
 
-use libretifs::AttrValue;
-use retifs_photos_core::{albums_of, Album, Library, Photo, ALBUM};
+use libvork::AttrValue;
+use vork_photos_core::{albums_of, Album, Library, Photo, ALBUM};
 use windows::core::{w, HSTRING, PCWSTR, PWSTR};
 use windows::Win32::Foundation::*;
 use windows::Win32::Graphics::Gdi::*;
@@ -25,7 +25,7 @@ use windows::Win32::UI::WindowsAndMessaging::*;
 
 use crate::canvas::{self, Key};
 
-const CLASS: PCWSTR = w!("retifs-photos");
+const CLASS: PCWSTR = w!("vork-photos");
 pub(crate) const WM_LOADED: u32 = WM_APP + 1;
 pub(crate) const WM_THUMBS: u32 = WM_APP + 2;
 pub(crate) const WM_IMAGE: u32 = WM_APP + 3;
@@ -146,10 +146,10 @@ fn controls() -> Option<Controls> {
     CONTROLS.with(|c| c.get())
 }
 
-/// Tests and screenshots (`RETIFS_PHOTOS_OFFSCREEN`): nothing shows on the
+/// Tests and screenshots (`VORK_PHOTOS_OFFSCREEN`): nothing shows on the
 /// screen or takes the focus from what the user is doing.
 pub(crate) fn offscreen() -> bool {
-    std::env::var_os("RETIFS_PHOTOS_OFFSCREEN").is_some()
+    std::env::var_os("VORK_PHOTOS_OFFSCREEN").is_some()
 }
 
 pub(crate) fn wide(s: &str) -> HSTRING {
@@ -195,16 +195,16 @@ fn spawn(what: &'static str, work: impl FnOnce(&Library) -> Result<(), String> +
 /// Where a windowed program writes what went wrong (it has no console).
 fn log_line(text: &str) {
     use std::io::Write;
-    let dir = std::path::PathBuf::from(std::env::var_os("LOCALAPPDATA").unwrap_or_default()).join("retifs").join("logs");
+    let dir = std::path::PathBuf::from(std::env::var_os("LOCALAPPDATA").unwrap_or_default()).join("vork").join("logs");
     let _ = std::fs::create_dir_all(&dir);
-    if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open(dir.join("retifs-photos.log")) {
+    if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open(dir.join("vork-photos.log")) {
         let _ = writeln!(f, "{text}");
     }
 }
 
 /// The libraries not shown, one a line (in the user's roaming settings).
 fn settings_path() -> std::path::PathBuf {
-    std::path::PathBuf::from(std::env::var_os("APPDATA").unwrap_or_default()).join("retifs-photos").join("hidden-libraries.txt")
+    std::path::PathBuf::from(std::env::var_os("APPDATA").unwrap_or_default()).join("vork-photos").join("hidden-libraries.txt")
 }
 
 fn load_hidden() -> BTreeSet<String> {
@@ -314,7 +314,7 @@ unsafe fn build(hwnd: HWND) {
         let col = LVCOLUMNW { mask: LVCF_WIDTH | LVCF_FMT, fmt: *fmt, cx: 100, ..Default::default() };
         SendMessageW(libs, LVM_INSERTCOLUMNW, WPARAM(i), LPARAM(&col as *const _ as isize));
     }
-    let status = child(hwnd, WC_STATICW, "Asking retifs…", WS_VISIBLE | WINDOW_STYLE(SS_NOPREFIX.0), 0, font);
+    let status = child(hwnd, WC_STATICW, "Asking vØrk storage…", WS_VISIBLE | WINDOW_STYLE(SS_NOPREFIX.0), 0, font);
 
     let tabs = child(hwnd, WC_TABCONTROLW, "", WS_VISIBLE | WS_CLIPSIBLINGS | WS_TABSTOP, ID_TABS, font);
     for (i, t) in ["Photos", "Albums"].iter().enumerate() {
@@ -344,7 +344,7 @@ unsafe fn build(hwnd: HWND) {
             index: HashMap::new(),
             read: HashSet::new(),
             error: None,
-            reading: Some("Asking retifs…".into()),
+            reading: Some("Asking vØrk storage…".into()),
             view: View::Photos,
             list: Vec::new(),
             list_index: HashMap::new(),
@@ -580,7 +580,7 @@ fn sort(photos: &mut Vec<Photo>) {
 
 /// Reads every library (all of them, so showing one again is at once),
 /// then again when poked: by the watcher when one changed (here or on
-/// another device), or after a change made here. Without retifsd it asks
+/// another device), or after a change made here. Without vorkd it asks
 /// again every 15 s; otherwise every 5 min, in case a change went unsaid.
 fn loader() {
     let lib = Library::new();
@@ -635,7 +635,7 @@ fn loader() {
     }
 }
 
-/// Pokes the loader the moment a library changes: retifsd says so
+/// Pokes the loader the moment a library changes: vorkd says so
 /// (`Library::wait_change`), waited for on a `Library` of its own so the
 /// loader isn't held up meanwhile.
 fn watcher() {
@@ -741,7 +741,7 @@ unsafe fn show_status() {
     let note = NOTE.lock().unwrap().clone();
     let Some(text) = with(|s| {
         if let Some(e) = &s.error {
-            format!("retifsd isn't answering: {e}")
+            format!("vorkd isn't answering: {e}")
         } else if let Some(r) = &s.reading {
             r.clone()
         } else if !note.is_empty() {
@@ -857,7 +857,7 @@ unsafe fn changeable() -> Vec<Photo> {
     ok
 }
 
-/// Changes photos here at once (as retifsd is asked to), until read again.
+/// Changes photos here at once (as vorkd is asked to), until read again.
 fn update_photos(keys: &[Key], change: impl Fn(&mut Photo)) {
     with(|s| {
         for k in keys {
@@ -1043,14 +1043,14 @@ unsafe fn rename_album(owner: HWND) {
     spawn("Renaming the album", move |lib| lib.rename_album(&libs, &name, &to));
 }
 
-/// Announces live in the retifs app: it's opened (the libraries heard of,
+/// Announces live in the vØrk storage app: it's opened (the libraries heard of,
 /// to join one, are there).
 unsafe fn announces(owner: HWND) {
-    let installed = std::path::PathBuf::from(std::env::var_os("LOCALAPPDATA").unwrap_or_default()).join("Programs").join("retifs").join("retifs-desktop.exe");
-    let exe = if installed.exists() { installed.display().to_string() } else { "retifs-desktop.exe".into() };
+    let installed = std::path::PathBuf::from(std::env::var_os("LOCALAPPDATA").unwrap_or_default()).join("Programs").join("vork-storage").join("vork-desktop.exe");
+    let exe = if installed.exists() { installed.display().to_string() } else { "vork-desktop.exe".into() };
     let r = ShellExecuteW(owner, w!("open"), &wide(&exe), w!("--show"), None, SW_SHOWNORMAL);
     if r.0 as isize <= 32 {
-        note("The retifs app isn't installed here: its Announces page lists the libraries heard of.");
+        note("The vØrk storage app isn't installed here: its Announces page lists the libraries heard of.");
         show_status();
     }
 }

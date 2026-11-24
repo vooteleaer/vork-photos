@@ -1,4 +1,4 @@
-package org.retifs.photos
+package org.vork.photos
 
 import android.Manifest
 import android.app.job.JobInfo
@@ -27,12 +27,12 @@ import java.io.File
  * each picture once, described and given its thumbnails here so every
  * device shows it at once. On unless the user turns it off: runs when
  * the app opens, whenever new pictures appear (a job the system starts),
- * every few hours to catch up, and again soon after retifs couldn't be
+ * every few hours to catch up, and again soon after vØrk storage couldn't be
  * reached. If the user wants, what's backed up then leaves the phone (its
  * trash) while the app is open, and the library is where the photos are.
  */
 object Backup {
-    private const val TAG = "retifs-photos-backup"
+    private const val TAG = "vork-photos-backup"
     private const val JOB = 1
     private const val JOB_CATCH_UP = 2
     private const val JOB_RETRY = 3
@@ -232,8 +232,8 @@ object Backup {
                 if (r.startsWith("error: ")) {
                     Log.w(TAG, "${item.path}: $r")
                     failed++
-                    // retifs went away: the rest later.
-                    if (Retifs.problem != null) break
+                    // vØrk storage went away: the rest later.
+                    if (VorkStorage.problem != null) break
                     continue
                 }
                 remember(context, item, r)
@@ -243,12 +243,12 @@ object Backup {
             if (n > 0) backedUp++
             val left = todo.size - n
             note = when {
-                Retifs.problem != null -> "Waiting for retifs"
+                VorkStorage.problem != null -> "Waiting for vØrk storage"
                 left == 0 -> "All $all backed up"
                 failed > 0 -> "$left not backed up ($failed failed)"
                 else -> "$left left"
             }
-            return !stop && Retifs.problem != null
+            return !stop && VorkStorage.problem != null
         } finally {
             running = false
         }
@@ -287,7 +287,7 @@ object Backup {
         }
     }
 
-    /** Tries again in a few minutes (retifs wasn't there). */
+    /** Tries again in a few minutes (vØrk storage wasn't there). */
     fun retry(context: Context) {
         if (!enabled(context)) return
         context.getSystemService(JobScheduler::class.java).schedule(JobInfo.Builder(JOB_RETRY, ComponentName(context, BackupJob::class.java))

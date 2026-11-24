@@ -1,4 +1,4 @@
-package org.retifs.photos
+package org.vork.photos
 
 import android.content.Intent
 import android.net.Uri

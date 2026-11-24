@@ -3,8 +3,8 @@
 # repo's GTK app, from the manifest next to this (x86_64; aarch64 with
 # ARCH=aarch64 on an aarch64 machine). Needs flatpak and flatpak-builder; the
 # runtime (org.gnome.Platform//50) and the rust-stable extension come from
-# Flathub. retifs is expected next to this repo (`../retifs`), as for the
-# .deb. retifs itself (retifsd) is the host's: the retifs .deb.
+# Flathub. The vork repository is expected next to this one (`../vork`), as for the
+# .deb. vØrk storage itself (vorkd) is the host's: the vork-storage .deb.
 #
 #     packaging/flatpak/build.sh [OUT_DIR] [NAME]
 #
@@ -13,15 +13,15 @@ set -euo pipefail
 HERE=$(cd "$(dirname "$0")" && pwd)
 ROOT=$(cd "$HERE/../.." && pwd)
 PROJ=$(cd "$ROOT/.." && pwd)
-MANIFEST=$(ls "$HERE"/org.retifs.*.yml | head -1)
+MANIFEST=$(ls "$HERE"/org.vork.*.yml | head -1)
 ID=$(basename "$MANIFEST" .yml)
 # The repos it builds from, named in the manifest as src/<repo>.
-SRCS="retifs $(basename "$ROOT")"
+SRCS="vork $(basename "$ROOT")"
 OUT=${1:-$ROOT/target/flatpak}
 VERSION=$(sed -n 's/^version = "\(.*\)"/\1/p' "$ROOT/Cargo.toml" | head -1 | tr -d '\r')
 COMMIT=$(git -C "$ROOT" rev-parse --short HEAD 2>/dev/null || echo unknown)
 # The bundle named as a release when this commit is tagged with the version,
-# else as a build towards it (retifs docs/versioning.md).
+# else as a build towards it (vork docs/storage/versioning.md).
 COUNT=$(git -C "$ROOT" rev-list --count HEAD 2>/dev/null || echo 0)
 if [ "$(git -C "$ROOT" describe --exact-match --tags HEAD 2>/dev/null)" = "v$VERSION" ]; then
     NAME=$VERSION
@@ -31,7 +31,7 @@ fi
 NAME=${2:-$NAME}
 ARCH=${ARCH:-$(flatpak --default-arch)}
 # Off the Windows mount, if that's where the repos are (WSL): much faster.
-WORK=${WORK:-$HOME/.cache/retifs-flatpak/$ID}
+WORK=${WORK:-$HOME/.cache/vork-flatpak/$ID}
 mkdir -p "$OUT" "$WORK"
 
 # flatpak-builder takes `dir` sources next to the manifest: the repos'

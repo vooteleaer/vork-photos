@@ -8,7 +8,7 @@
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 
-use retifs_photos_core::Photo;
+use vork_photos_core::Photo;
 use windows::core::{w, Interface, PCWSTR};
 use windows::Win32::Foundation::*;
 use windows::Win32::Graphics::Direct2D::Common::*;
@@ -26,7 +26,7 @@ use windows::Win32::UI::WindowsAndMessaging::*;
 use crate::app::{self, State, View};
 use crate::images::{self, Fit, Pixels};
 
-const CLASS: PCWSTR = w!("retifs-photos-canvas");
+const CLASS: PCWSTR = w!("vork-photos-canvas");
 /// Draw again (asked while the state was busy).
 const WM_REDRAW: u32 = WM_APP + 20;
 /// Size again, the same way.
@@ -617,7 +617,7 @@ unsafe fn paint(s: &mut State) {
 unsafe fn empty(s: &State, g: &Gfx, fonts: &Fonts, what: &str) -> bool {
     let (w, h) = s.canvas.size;
     let (title, body) = if let Some(e) = s.error.as_ref().filter(|_| s.all.is_empty()) {
-        ("retifs isn't running".to_string(), format!("{e}\n\nStart it from the retifs app; Photos tries again every 15 seconds."))
+        ("vØrk storage isn't running".to_string(), format!("{e}\n\nStart it from the vØrk storage app; Photos tries again every 15 seconds."))
     } else if let Some(r) = &s.reading {
         ("Reading librariesâ€¦".to_string(), r.clone())
     } else if s.libraries.iter().all(|l| s.hidden.contains(&l.name)) && !s.libraries.is_empty() {
@@ -919,7 +919,7 @@ unsafe fn viewer_wants(s: &mut State) {
         // Thumbnails and previews are made upright; the content is turned as its EXIF says.
         let orientation = if p.blocks.first() == Some(&cap) {
             match p.attrs.get("exif.orientation") {
-                Some(libretifs::AttrValue::Int(o)) => *o,
+                Some(libvork::AttrValue::Int(o)) => *o,
                 _ => 1,
             }
         } else {

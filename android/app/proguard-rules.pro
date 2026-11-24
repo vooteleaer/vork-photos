@@ -1,2 +1,2 @@
-# The JNI library calls Retifs.connect() by name.
--keep class org.retifs.photos.Retifs { public static int connect(); }
+# The JNI library calls VorkStorage.connect() by name.
+-keep class org.vork.photos.VorkStorage { public static int connect(); }

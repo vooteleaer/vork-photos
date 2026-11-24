@@ -12,7 +12,7 @@ use windows::Win32::UI::WindowsAndMessaging::*;
 
 use crate::app::{child, count, message_font, offscreen, scale, wide};
 
-const CLASS: PCWSTR = w!("retifs-photos-dialog");
+const CLASS: PCWSTR = w!("vork-photos-dialog");
 const ID_NEW: i32 = 300;
 const ID_LIST: i32 = 301;
 const ID_EDIT: i32 = 302;

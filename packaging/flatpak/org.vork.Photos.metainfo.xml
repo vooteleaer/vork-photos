@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>org.vork.Photos</id>
+  <name>Photos</name>
+  <summary>Your photos in vØrk storage: by month, albums, people, favourites</summary>
+  <metadata_license>MIT</metadata_license>
+  <project_license>MIT</project_license>
+  <description>
+    <p>Photos from your vØrk storage libraries: by month, in albums, by people, and favourites. It uses the vØrk storage daemon of this computer (the vork-storage .deb),
+    whose store all vØrk storage apps share. A prototype.</p>
+  </description>
+  <launchable type="desktop-id">org.vork.Photos.desktop</launchable>
+  <url type="homepage">https://github.com/vooteleaer/vork</url>
+  <content_rating type="oars-1.1"/>
+</component>

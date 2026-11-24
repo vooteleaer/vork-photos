@@ -1,11 +1,11 @@
 /*
- * retifs Photos for Haiku, with the Haiku API: the same album as on Linux.
+ * vØrk Photos for Haiku, with the Haiku API: the same album as on Linux.
  * Every photo in the libraries by month, newest first, as square thumbnails
  * (the blocks the extractor keeps with each photo); favourites, albums and
  * people (contacts) to narrow it to; and a viewer with what's known of a
  * photo, favourite, people to tag and albums to put it in.
  *
- * Everything comes from the shared Rust core through retifs_photos.h: JSON
+ * Everything comes from the shared Rust core through vork_photos.h: JSON
  * read into BMessages with BJson, images as bytes decoded by the Translation
  * Kit. The core's calls block, so they run in a looper of their own (Worker),
  * which answers whoever asked; a thread of its own (Watch) waits for the
@@ -45,9 +45,9 @@
 #include <string>
 #include <vector>
 
-#include "retifs_photos.h"
+#include "vork_photos.h"
 
-static const char* kSignature = "application/x-vnd.retifs-photos";
+static const char* kSignature = "application/x-vnd.vork-photos";
 static const float kCell = 150;
 static const float kGap = 4;
 static const float kHeader = 30;
@@ -317,7 +317,7 @@ Call(BHandler* replyTo, const char* op, const char* a = "", const char* b = "",
 
 
 /*! Tells the window (data, a BMessenger it owns) the moment a library
-	changes, until the window is gone. rp_wait_change() waits on retifsd
+	changes, until the window is gone. rp_wait_change() waits on vorkd
 	with a Library of its own, so the worker isn't held up meanwhile. */
 static status_t
 Watch(void* data)
@@ -1064,7 +1064,7 @@ private:
 		fTitle->SetText(title);
 		BString status;
 		if (fLoad.HasString("error"))
-			status << "retifsd isn't answering: " << fLoad.GetString("error", "");
+			status << "vorkd isn't answering: " << fLoad.GetString("error", "");
 		else
 			status << shown.size() << " photo(s)";
 		fStatus->SetText(status);

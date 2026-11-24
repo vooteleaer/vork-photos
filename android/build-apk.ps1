@@ -1,12 +1,12 @@
-# Builds retifs Photos for Android (a debug APK): the core's JNI library for
+# Builds vØrk Photos for Android (a debug APK): the core's JNI library for
 # each ABI with the NDK, into app/src/main/jniLibs, then Gradle. It reaches
-# retifs through the retifs app (org.retifs.desktop), which must be installed.
+# vØrk storage through the vØrk storage app (org.vork.storage), which must be installed.
 #
 #     powershell -ExecutionPolicy Bypass -File android\build-apk.ps1 [-Abis arm64-v8a,x86_64] [-Release]
 #
 # Needs the Android SDK with NDK 27 ($env:ANDROID_HOME, default C:\Android\Sdk),
 # JDK 17, rustup targets aarch64-linux-android and x86_64-linux-android, and
-# retifs next to retifs-photos.
+# vork next to vork-photos.
 param([string[]]$Abis = @("arm64-v8a", "x86_64"), [switch]$Release)
 
 $ErrorActionPreference = "Stop"
@@ -31,11 +31,11 @@ foreach ($abi in $Abis) {
     Set-Item "env:CC_$under" "$Bin\$triple$Api-clang.cmd"
     Set-Item "env:AR_$under" "$Bin\llvm-ar.exe"
     Write-Host "== $abi ($triple)"
-    Invoke-Cargo build --release --target $triple --manifest-path "$Root\Cargo.toml" -p retifs-photos-jni
+    Invoke-Cargo build --release --target $triple --manifest-path "$Root\Cargo.toml" -p vork-photos-jni
     $out = "$Here\app\src\main\jniLibs\$abi"
     New-Item -ItemType Directory -Force $out | Out-Null
-    Copy-Item "$env:CARGO_TARGET_DIR\$triple\release\libretifs_photos.so" "$out\libretifs_photos.so"
-    & "$Bin\llvm-strip.exe" "$out\libretifs_photos.so"
+    Copy-Item "$env:CARGO_TARGET_DIR\$triple\release\libvork_photos.so" "$out\libvork_photos.so"
+    & "$Bin\llvm-strip.exe" "$out\libvork_photos.so"
 }
 
 Write-Host "== APK"

@@ -1,4 +1,4 @@
-package org.retifs.photos
+package org.vork.photos
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -10,11 +10,11 @@ import kotlinx.coroutines.withContext
  */
 object Core {
     init {
-        System.loadLibrary("retifs_photos")
+        System.loadLibrary("vork_photos")
     }
 
-    /** `retifs`: the class whose static `connect()` gives connections. */
-    external fun init(retifs: Class<*>)
+    /** `storage`: the class whose static `connect()` gives connections. */
+    external fun init(storage: Class<*>)
     /** The libraries this app may use: `[{name, writable}]`, or `{"error"}`. */
     external fun libraries(): String
     /** Every picture in `libraries` (a JSON array), newest first, or `{"error"}`. */
@@ -39,7 +39,7 @@ object Core {
     external fun waitChange(known: String, timeoutMs: Long): String
     /** Where the core writes its own panics (a folder, and the header each report starts with). */
     external fun crashDir(dir: String, header: String)
-    /** A crash or trouble report to retifs (`kind`, from `source`): true once it took it. */
+    /** A crash or trouble report to vØrk storage (`kind`, from `source`): true once it took it. */
     external fun crashReport(kind: String, source: String, text: String): Boolean
 }
 

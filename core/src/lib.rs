@@ -1,4 +1,4 @@
-//! Photos on retifs: every picture in the user's libraries (`type` an image
+//! Photos on vØrk storage: every picture in the user's libraries (`type` an image
 //! MIME type, ADR-0025), shown small by the thumbnails the extractor keeps
 //! with each (ADR-0026); albums, which are only what photos say (`album`: a
 //! name, or a list of them; an album is there while a photo is in it, and
@@ -9,7 +9,7 @@
 use std::collections::{BTreeMap, HashMap};
 use std::path::PathBuf;
 
-use libretifs::{types, AttrValue, Client, RecordView, Request, Response, TxStep};
+use libvork::{types, AttrValue, Client, RecordView, Request, Response, TxStep};
 
 pub const ME: &str = "me";
 /// The albums a photo is in: a name, or a list of names.
@@ -18,7 +18,7 @@ pub const ALBUM: &str = "album";
 pub const COVER_OF: &str = "cover-of";
 /// Albums as records of their own, before 2026-11-05: photos said
 /// `album:<album record id> = name`. Moved to [`ALBUM`] when seen.
-const OLD_ALBUM_TYPE: &str = "application/x-vnd.retifs.album";
+const OLD_ALBUM_TYPE: &str = "application/x-vnd.vork.album";
 
 /// A picture: where it lives and its record.
 #[derive(Debug, Clone, PartialEq)]
@@ -221,12 +221,12 @@ pub struct Person {
     pub photo: Option<String>,
 }
 
-/// Opens a connection to `retifsd` some other way than its socket (on
-/// Android: from the retifs app's access service).
+/// Opens a connection to `vorkd` some other way than its socket (on
+/// Android: from the vØrk storage app's access service).
 #[cfg(unix)]
 pub type Connector = Box<dyn Fn() -> Result<std::os::unix::net::UnixStream, String> + Send + Sync>;
 
-/// The connection to `retifsd`.
+/// The connection to `vorkd`.
 pub struct Library {
     rt: tokio::runtime::Runtime,
     store: PathBuf,
@@ -245,7 +245,7 @@ impl Library {
         let rt = tokio::runtime::Builder::new_current_thread().enable_all().build().expect("a tokio runtime");
         Library {
             rt,
-            store: libretifs::default_store_dir(),
+            store: libvork::default_store_dir(),
             #[cfg(unix)]
             connector: None,
         }
@@ -308,7 +308,7 @@ impl Library {
         let mut out: Vec<Photo> = Vec::new();
         for ns in libraries {
             if let Err(e) = self.move_old_albums(&mut c, ns) {
-                eprintln!("retifs-photos: {ns}: moving albums: {e}");
+                eprintln!("vork-photos: {ns}: moving albums: {e}");
             }
             // Image types (ADR-0025), and the words used before.
             for term in ["type^=image/", "type=image", "type=photo"] {
@@ -344,7 +344,7 @@ impl Library {
     /// without waiting for one. `path` is where it was (`DCIM/Camera/…`),
     /// `mtime_ms` when it last changed there. Its record ID.
     pub fn import(&self, ns: &str, bytes: Vec<u8>, path: &str, mtime_ms: i64) -> Result<String, String> {
-        use retifs_extract::{extract, marker, thumbnails, MARKER};
+        use vork_extract::{extract, marker, thumbnails, MARKER};
         let name = path.rsplit('/').next().unwrap_or(path).to_string();
         let found = extract(&mut std::io::Cursor::new(&bytes), bytes.len() as u64, Some(&name));
         let orientation = found.attrs.iter().find_map(|(k, v)| match (k.as_str(), v) {
@@ -432,7 +432,7 @@ impl Library {
         }
         steps.extend(old.iter().map(|r| TxStep::Delete { id: r.id.clone() }));
         self.call(c, Request::Transaction { ns: ns.into(), steps })?;
-        eprintln!("retifs-photos: {ns}: {} album(s) moved onto their photos", old.len());
+        eprintln!("vork-photos: {ns}: {} album(s) moved onto their photos", old.len());
         Ok(())
     }
 
@@ -459,7 +459,7 @@ impl Library {
         self.call(&mut c, Request::RecordSet { ns: ns.into(), id: id.into(), attrs, unset, data: None }).map(|_| ())
     }
 
-    /// A crash or trouble report to retifs (ADR-0036), which keeps it for the
+    /// A crash or trouble report to vØrk storage (ADR-0036), which keeps it for the
     /// user's crash library.
     pub fn crash_report(&self, kind: &str, source: &str, text: &str) -> Result<(), String> {
         let mut c = self.client()?;
@@ -637,7 +637,7 @@ impl Library {
 
     /// Waits until one of the libraries in `known` (with their change counts)
     /// changes, for at most `timeout`: whether one did, its count in `known`
-    /// brought up to date. retifsd answers the moment a change comes, so a
+    /// brought up to date. vorkd answers the moment a change comes, so a
     /// front end waiting on this (on a thread, with a `Library` of its own)
     /// shows new photos at once instead of asking every few seconds.
     pub fn wait_change(&self, known: &mut HashMap<String, u64>, timeout: std::time::Duration) -> bool {
@@ -646,7 +646,7 @@ impl Library {
             std::thread::sleep(timeout.min(std::time::Duration::from_secs(5)));
             return false;
         }
-        match self.rt.block_on(libretifs::watch_any(watches, timeout)) {
+        match self.rt.block_on(libvork::watch_any(watches, timeout)) {
             Ok(Some((ns, count))) => {
                 known.insert(ns, count);
                 // Changes come in bursts (a sync merging many): a second
@@ -657,7 +657,7 @@ impl Library {
                 true
             }
             Ok(None) => false,
-            // retifsd away (restarting): not at once again.
+            // vorkd away (restarting): not at once again.
             Err(_) => {
                 std::thread::sleep(std::time::Duration::from_secs(5));
                 false

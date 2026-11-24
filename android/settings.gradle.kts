@@ -14,5 +14,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "retifs-photos"
+rootProject.name = "vork-photos"
 include(":app")

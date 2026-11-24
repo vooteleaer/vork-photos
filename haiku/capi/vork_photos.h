@@ -1,12 +1,12 @@
 /*
- * retifs Photos' shared core, as C (haiku/capi): JSON in and out, images as
+ * vØrk Photos' shared core, as C (haiku/capi): JSON in and out, images as
  * bytes. Strings are freed with rp_free(), images with rp_free_bytes().
  * rp_load() reads everything; the other calls name its photos and people by
  * ID, albums by their name in lower case. Answers that can fail are objects
  * with "error" when they did. Calls block.
  */
-#ifndef RETIFS_PHOTOS_H
-#define RETIFS_PHOTOS_H
+#ifndef VORK_PHOTOS_H
+#define VORK_PHOTOS_H
 
 #include <stddef.h>
 #include <stdint.h>

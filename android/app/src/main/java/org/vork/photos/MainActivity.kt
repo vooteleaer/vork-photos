@@ -1,4 +1,4 @@
-package org.retifs.photos
+package org.vork.photos
 
 import android.content.Context
 import android.os.Build
@@ -204,7 +204,7 @@ fun App() {
         withContext(Dispatchers.IO) { Backup.removeRequest(context) }?.let { remove.launch(IntentSenderRequest.Builder(it).build()) }
     }
     // Changes from elsewhere (another device, the backup): read again the
-    // moment retifsd says a shown library changed, while the app is on screen.
+    // moment vorkd says a shown library changed, while the app is on screen.
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     LaunchedEffect(Unit) {
         lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -212,7 +212,7 @@ fun App() {
             while (true) {
                 val answer = JSONObject(core { Core.waitChange(gallery.watching(known), 60_000) })
                 known = answer.optJSONObject("known") ?: JSONObject()
-                if (answer.optBoolean("changed") && Retifs.problem == null) {
+                if (answer.optBoolean("changed") && VorkStorage.problem == null) {
                     // A read under way may have passed the change already: after it, again.
                     snapshotFlow { gallery.reading }.first { it == null }
                     gallery.load()
@@ -241,7 +241,7 @@ fun App() {
     }
 
     ModalNavigationDrawer(drawerState = drawer, drawerContent = {
-        ModalDrawerSheet { Drawer(gallery, letIn = { letIn.launch(Retifs.letIn()) }) }
+        ModalDrawerSheet { Drawer(gallery, letIn = { letIn.launch(VorkStorage.letIn()) }) }
     }) {
         Scaffold(
             topBar = {
@@ -273,8 +273,8 @@ fun App() {
                     LinearProgressIndicator(progress = { gallery.progress }, modifier = Modifier.fillMaxWidth())
                     Text(it, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp))
                 }
-                if (Retifs.problem != null) {
-                    Problem(Retifs.problem!!, letIn = { letIn.launch(Retifs.letIn()) }, retry = { reloads++ })
+                if (VorkStorage.problem != null) {
+                    Problem(VorkStorage.problem!!, letIn = { letIn.launch(VorkStorage.letIn()) }, retry = { reloads++ })
                     return@Column
                 }
                 if (gallery.error.isNotEmpty()) Text(gallery.error, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(16.dp))
@@ -293,26 +293,26 @@ fun App() {
     }
 }
 
-/** retifs can't be used yet: why, and what to do. */
+/** vØrk storage can't be used yet: why, and what to do. */
 @Composable
-fun Problem(p: Retifs.Problem, letIn: () -> Unit, retry: () -> Unit) {
+fun Problem(p: VorkStorage.Problem, letIn: () -> Unit, retry: () -> Unit) {
     val context = LocalContext.current
     Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         when (p) {
-            Retifs.Problem.NOT_INSTALLED -> {
-                Text("retifs isn't installed", style = MaterialTheme.typography.titleMedium)
-                Text("Photos shows the pictures in your retifs libraries. Install the retifs app (from the retifs-installers library) first.")
+            VorkStorage.Problem.NOT_INSTALLED -> {
+                Text("vØrk storage isn't installed", style = MaterialTheme.typography.titleMedium)
+                Text("Photos shows the pictures in your vØrk storage libraries. Install the vØrk storage app (from the vork-installers library) first.")
             }
-            Retifs.Problem.NOT_LET_IN -> {
-                Text("Let Photos use retifs", style = MaterialTheme.typography.titleMedium)
-                Text("retifs asks which of your libraries Photos may see, and whether it may add to them (to back up this phone's pictures).")
+            VorkStorage.Problem.NOT_LET_IN -> {
+                Text("Let Photos use vØrk storage", style = MaterialTheme.typography.titleMedium)
+                Text("vØrk storage asks which of your libraries Photos may see, and whether it may add to them (to back up this phone's pictures).")
                 Button(onClick = letIn) { Text("Choose libraries…") }
             }
-            Retifs.Problem.NOT_RUNNING -> {
-                Text("retifs isn't running", style = MaterialTheme.typography.titleMedium)
-                Text("Open retifs: it starts once Reticulum is up.")
+            VorkStorage.Problem.NOT_RUNNING -> {
+                Text("vØrk storage isn't running", style = MaterialTheme.typography.titleMedium)
+                Text("Open vØrk storage: it starts once vØrk is up.")
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Retifs.open(context)?.let { i -> OutlinedButton(onClick = { context.startActivity(i) }) { Text("Open retifs") } }
+                    VorkStorage.open(context)?.let { i -> OutlinedButton(onClick = { context.startActivity(i) }) { Text("Open vØrk storage") } }
                     Button(onClick = retry) { Text("Try again") }
                 }
             }
@@ -320,13 +320,13 @@ fun Problem(p: Retifs.Problem, letIn: () -> Unit, retry: () -> Unit) {
     }
 }
 
-/** The libraries: Announces above (in the retifs app), each library a toggle. */
+/** The libraries: Announces above (in the vØrk storage app), each library a toggle. */
 @Composable
 fun Drawer(gallery: Gallery, letIn: () -> Unit) {
     val context = LocalContext.current
     LazyColumn(Modifier.padding(vertical = 8.dp)) {
         item {
-            OutlinedButton(onClick = { Retifs.open(context)?.let { context.startActivity(it) } }, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) { Text("Announces") }
+            OutlinedButton(onClick = { VorkStorage.open(context)?.let { context.startActivity(it) } }, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) { Text("Announces") }
             Text("Libraries", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 4.dp))
         }
         items(gallery.libraries, key = { it.name }) { l ->
@@ -342,7 +342,7 @@ fun Drawer(gallery: Gallery, letIn: () -> Unit) {
         }
         item {
             HorizontalDivider(Modifier.padding(vertical = 8.dp))
-            Text("Photos sees only the libraries retifs let it in to.", style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(horizontal = 16.dp))
+            Text("Photos sees only the libraries vØrk storage let it in to.", style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(horizontal = 16.dp))
             Box(Modifier.padding(16.dp)) { OutlinedButton(onClick = letIn) { Text("Choose libraries…") } }
         }
     }

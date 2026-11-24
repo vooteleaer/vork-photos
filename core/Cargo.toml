@@ -1,13 +1,13 @@
 [package]
-name = "retifs-photos-core"
-description = "Photos on retifs: pictures, their thumbnails, albums and the people in them (ADR-0024, ADR-0026), through libretifs"
+name = "vork-photos-core"
+description = "Photos on vØrk storage: pictures, their thumbnails, albums and the people in them (ADR-0024, ADR-0026), through libvork"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 publish.workspace = true
 
 [dependencies]
-libretifs = { path = "../../retifs/crates/libretifs" }
+libvork = { path = "../../vork/crates/libvork" }
 # Describing a picture imported here, as the extractor would (ADR-0023, ADR-0026).
-retifs-extract = { path = "../../retifs/crates/retifs-extract" }
+vork-extract = { path = "../../vork/crates/vork-extract" }
 tokio = { version = "1", features = ["rt"] }

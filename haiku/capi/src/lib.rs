@@ -1,4 +1,4 @@
-//! retifs Photos for Haiku: the shared core to C (and so to the BeAPI front
+//! vØrk Photos for Haiku: the shared core to C (and so to the BeAPI front
 //! end), JSON in and out, images as bytes. The same calls as the GTK front
 //! end makes.
 //!
@@ -13,7 +13,7 @@ use std::collections::HashMap;
 use std::ffi::{CStr, CString, c_char, c_int};
 use std::sync::{Mutex, OnceLock};
 
-use retifs_photos_core::{Album, Library, Person, Photo, albums_of};
+use vork_photos_core::{Album, Library, Person, Photo, albums_of};
 use serde_json::{Value, json};
 
 #[derive(Default)]
@@ -65,7 +65,7 @@ fn album_ids(p: &Photo) -> Vec<String> {
 /// Everything the window shows, read again: `{"libraries", "photos": [{"ns",
 /// "id", "title", "month", "favorite", "albums": [id], "people": [id]}]`
 /// (newest first), `"albums": [{"id", "name", "cover"}]`, `"people": [{"id",
-/// "name", "photo"}]`, and `"error"` when retifsd doesn't answer.
+/// "name", "photo"}]`, and `"error"` when vorkd doesn't answer.
 #[unsafe(no_mangle)]
 pub extern "C" fn rp_load() -> *mut c_char {
     let lib = library();
@@ -241,7 +241,7 @@ pub extern "C" fn rp_change_counts() -> *mut c_char {
 /// Waits until a library of the last load changes, for at most
 /// `timeout_ms`: `{"changed", "known": {ns: count}}`. `known` is this call's
 /// last answer (or its "known"), or null at first; a library not in it
-/// counts from the last load. retifsd answers the moment a change comes.
+/// counts from the last load. vorkd answers the moment a change comes.
 /// It waits with a `Library` of its own, so it may run beside the other
 /// calls: on a thread of its own, called again and again.
 ///

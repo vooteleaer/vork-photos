@@ -1,4 +1,4 @@
-package org.retifs.photos
+package org.vork.photos
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory

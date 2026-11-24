@@ -770,7 +770,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "65cd87c9a6d60536580b316ad985726104730a5151c99845f2490428ef91240a"
 
 [[package]]
-name = "libretifs"
+name = "libvork"
 version = "0.6.0"
 dependencies = [
  "libc",
@@ -984,66 +984,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1fbf4db142a473a8d80c26bbf18454ed458bf8d26c8219c331daecfdbd079001"
 dependencies = [
  "proc-macro2",
-]
-
-[[package]]
-name = "retifs-extract"
-version = "0.6.0"
-dependencies = [
- "image",
- "imagesize",
- "infer",
- "kamadak-exif",
- "libretifs",
- "lofty",
- "sha2",
- "tokio",
- "zip",
-]
-
-[[package]]
-name = "retifs-photos-capi"
-version = "0.6.0"
-dependencies = [
- "retifs-photos-core",
- "serde_json",
-]
-
-[[package]]
-name = "retifs-photos-core"
-version = "0.6.0"
-dependencies = [
- "libretifs",
- "retifs-extract",
- "tokio",
-]
-
-[[package]]
-name = "retifs-photos-gtk"
-version = "0.6.0"
-dependencies = [
- "gtk4",
- "libadwaita",
- "retifs-photos-core",
-]
-
-[[package]]
-name = "retifs-photos-jni"
-version = "0.6.0"
-dependencies = [
- "jni",
- "libretifs",
- "retifs-photos-core",
- "serde_json",
-]
-
-[[package]]
-name = "retifs-photos-win"
-version = "0.6.0"
-dependencies = [
- "libretifs",
- "retifs-photos-core",
- "windows",
 ]
 
 [[package]]
@@ -1381,6 +1321,66 @@ name = "version_check"
 version = "0.9.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
+
+[[package]]
+name = "vork-extract"
+version = "0.6.0"
+dependencies = [
+ "image",
+ "imagesize",
+ "infer",
+ "kamadak-exif",
+ "libvork",
+ "lofty",
+ "sha2",
+ "tokio",
+ "zip",
+]
+
+[[package]]
+name = "vork-photos-capi"
+version = "0.6.0"
+dependencies = [
+ "serde_json",
+ "vork-photos-core",
+]
+
+[[package]]
+name = "vork-photos-core"
+version = "0.6.0"
+dependencies = [
+ "libvork",
+ "tokio",
+ "vork-extract",
+]
+
+[[package]]
+name = "vork-photos-gtk"
+version = "0.6.0"
+dependencies = [
+ "gtk4",
+ "libadwaita",
+ "vork-photos-core",
+]
+
+[[package]]
+name = "vork-photos-jni"
+version = "0.6.0"
+dependencies = [
+ "jni",
+ "libvork",
+ "serde_json",
+ "vork-photos-core",
+]
+
+[[package]]
+name = "vork-photos-win"
+version = "0.6.0"
+dependencies = [
+ "libvork",
+ "vork-photos-core",
+ "windows",
+]
 
 [[package]]
 name = "walkdir"

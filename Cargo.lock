@@ -1339,7 +1339,7 @@ dependencies = [
 
 [[package]]
 name = "vork-photos-capi"
-version = "0.6.1"
+version = "0.7.0"
 dependencies = [
  "serde_json",
  "vork-photos-core",
@@ -1347,7 +1347,7 @@ dependencies = [
 
 [[package]]
 name = "vork-photos-core"
-version = "0.6.1"
+version = "0.7.0"
 dependencies = [
  "libvork",
  "tokio",
@@ -1356,7 +1356,7 @@ dependencies = [
 
 [[package]]
 name = "vork-photos-gtk"
-version = "0.6.1"
+version = "0.7.0"
 dependencies = [
  "gtk4",
  "libadwaita",
@@ -1365,7 +1365,7 @@ dependencies = [
 
 [[package]]
 name = "vork-photos-jni"
-version = "0.6.1"
+version = "0.7.0"
 dependencies = [
  "jni",
  "libvork",
@@ -1375,7 +1375,7 @@ dependencies = [
 
 [[package]]
 name = "vork-photos-win"
-version = "0.6.1"
+version = "0.7.0"
 dependencies = [
  "libvork",
  "vork-photos-core",

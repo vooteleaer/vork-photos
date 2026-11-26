@@ -49,6 +49,7 @@ pub(crate) const ID_RENAME: i32 = 118;
 pub(crate) const ID_COVER: i32 = 119;
 pub(crate) const ID_OPEN: i32 = 120;
 pub(crate) const ID_SELECT_ALL: i32 = 121;
+pub(crate) const ID_DELETE: i32 = 124;
 const ID_SHOW_PHOTOS: i32 = 122;
 const ID_SHOW_ALBUMS: i32 = 123;
 /// The library menu's items: a library each, from here.
@@ -110,6 +111,7 @@ struct Controls {
     fav: HWND,
     add: HWND,
     remove: HWND,
+    delete: HWND,
     clear: HWND,
     library: HWND,
     rename: HWND,
@@ -331,12 +333,13 @@ unsafe fn build(hwnd: HWND) {
     let fav = child(hwnd, WC_BUTTONW, "★ Favourite", WS_TABSTOP | WINDOW_STYLE((BS_CHECKBOX | BS_PUSHLIKE) as u32), ID_FAV, font);
     let add = button("+ Add to albums…", ID_ADD);
     let remove = button("Remove from album", ID_REMOVE);
+    let delete = button("Delete…", ID_DELETE);
     let clear = button("Clear selection", ID_CLEAR);
     let library = button("Library…", ID_LIBRARY);
     let rename = button("Rename…", ID_RENAME);
     let canvas = canvas::create(hwnd);
 
-    CONTROLS.with(|c| c.set(Some(Controls { hwnd, announces, libs_label, libs, status, tabs, back, prev, next, title, fav, add, remove, clear, library, rename, canvas, font })));
+    CONTROLS.with(|c| c.set(Some(Controls { hwnd, announces, libs_label, libs, status, tabs, back, prev, next, title, fav, add, remove, delete, clear, library, rename, canvas, font })));
     STATE.with(|s| {
         *s.borrow_mut() = Some(State {
             libraries: Vec::new(),
@@ -429,6 +432,7 @@ unsafe fn layout(hwnd: HWND) {
         }
     };
     at_right(c.clear, s(118), bar.selection && !bar.viewer);
+    at_right(c.delete, s(90), bar.selection || bar.viewer);
     at_right(c.remove, s(140), bar.selection && bar.album && !bar.viewer);
     at_right(c.rename, s(90), bar.album && !bar.selection && !bar.viewer);
     at_right(c.library, s(170), bar.album && !bar.selection && !bar.viewer);
@@ -824,6 +828,7 @@ pub(crate) unsafe fn command(id: i32) {
         ID_FAV => favourite(),
         ID_ADD => add_to_albums(hwnd),
         ID_REMOVE => remove_from_album(),
+        ID_DELETE => delete_photos(hwnd),
         ID_COVER => make_cover(),
         ID_LIBRARY => album_library_menu(hwnd),
         ID_RENAME => rename_album(hwnd),
@@ -965,6 +970,34 @@ unsafe fn remove_from_album() {
     });
 }
 
+/// Deletes the chosen photos from their libraries, once asked.
+unsafe fn delete_photos(owner: HWND) {
+    let photos = changeable();
+    if photos.is_empty() {
+        return;
+    }
+    let what = if photos.len() == 1 { "this photo".to_string() } else { count(photos.len(), "photo", "photos") };
+    let q = wide(&format!("Delete {what}?
+
+They're deleted from their library on every device that holds it."));
+    if MessageBoxW(owner, &q, w!("Photos"), MB_YESNO | MB_ICONWARNING | MB_DEFBUTTON2) != IDYES {
+        return;
+    }
+    let keys: HashSet<Key> = photos.iter().map(canvas::key).collect();
+    with(|s| {
+        s.canvas.viewer = None;
+        s.canvas.clear_selection();
+        s.all.retain(|p| !keys.contains(&canvas::key(p)));
+        refilter(s);
+    });
+    spawn("Deleting photos", move |lib| {
+        for p in &photos {
+            lib.delete_photo(p)?;
+        }
+        Ok(())
+    });
+}
+
 /// The selected photo is the album's cover from now on.
 unsafe fn make_cover() {
     let Some((View::Album(name), libs)) = with(|s| (s.view.clone(), s.libraries.iter().map(|l| l.name.clone()).collect::<Vec<_>>())) else { return };
@@ -1095,7 +1128,7 @@ unsafe extern "system" fn wndproc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: 
             // A new font for the new DPI, then the size Windows suggests.
             if let Some(mut c) = controls() {
                 let font = message_font(hwnd);
-                for h in [c.announces, c.libs_label, c.libs, c.status, c.tabs, c.back, c.prev, c.next, c.title, c.fav, c.add, c.remove, c.clear, c.library, c.rename] {
+                for h in [c.announces, c.libs_label, c.libs, c.status, c.tabs, c.back, c.prev, c.next, c.title, c.fav, c.add, c.remove, c.delete, c.clear, c.library, c.rename] {
                     SendMessageW(h, WM_SETFONT, WPARAM(font.0 as usize), LPARAM(1));
                 }
                 let _ = DeleteObject(c.font);

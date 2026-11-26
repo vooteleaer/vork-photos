@@ -168,6 +168,12 @@ class Gallery(val context: Context) {
         val byId = changed.associateBy { it.ns to it.id }
         photos = photos.map { byId[it.ns to it.id] ?: it }
     }
+
+    /** Takes deleted photos out at once. */
+    fun remove(gone: List<Photo>) {
+        val ids = gone.map { it.ns to it.id }.toSet()
+        photos = photos.filter { (it.ns to it.id) !in ids }
+    }
 }
 
 enum class Tab { Photos, Albums, Backup }

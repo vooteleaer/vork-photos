@@ -677,6 +677,16 @@ impl Library {
         Ok(id)
     }
 
+    /// Deletes a photo from its library, on every device that holds it. Its
+    /// content goes once no record refers to it.
+    pub fn delete_photo(&self, p: &Photo) -> Result<(), String> {
+        if !self.writable(&p.ns) {
+            return Err(format!("{} may not be changed here, so its photos can't be deleted", p.ns));
+        }
+        let mut c = self.client()?;
+        self.call(&mut c, Request::RecordDelete { ns: p.ns.clone(), id: p.id.clone() }).map(|_| ())
+    }
+
     /// Moves album `name` into library `to`: every photo of it in
     /// `libraries` that's elsewhere ([`Library::move_photo`]). How many moved.
     pub fn move_album(&self, libraries: &[String], name: &str, to: &str) -> Result<usize, String> {

@@ -255,6 +255,21 @@ pub extern "system" fn Java_org_vork_photos_Core_movePhotos<'l>(mut env: JNIEnv<
     out(&mut env, err)
 }
 
+/// Deletes `photos` (`[{ns, id}]`) from their libraries; the last error, "" when fine.
+#[no_mangle]
+pub extern "system" fn Java_org_vork_photos_Core_deletePhotos<'l>(mut env: JNIEnv<'l>, _: JClass<'l>, photos: JString<'l>) -> jstring {
+    let photos = value(&mut env, &photos);
+    let mut err = String::new();
+    with(|l| {
+        for p in photos.as_array().into_iter().flatten() {
+            if let Err(e) = l.delete_photo(&photo_from(p)) {
+                err = e;
+            }
+        }
+    });
+    out(&mut env, err)
+}
+
 /// Moves album `name`'s photos in `libraries` into library `to`: "" when fine, else the error.
 #[no_mangle]
 pub extern "system" fn Java_org_vork_photos_Core_moveAlbum<'l>(mut env: JNIEnv<'l>, _: JClass<'l>, libraries: JString<'l>, name: JString<'l>, to: JString<'l>) -> jstring {

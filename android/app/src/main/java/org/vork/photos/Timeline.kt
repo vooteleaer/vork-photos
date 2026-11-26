@@ -36,6 +36,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
@@ -87,7 +88,7 @@ fun monthLabel(day: String): String = runCatching { LocalDate.parse(day).format(
  * Every picture by the day it was taken, newest first (Immich's timeline):
  * four to a row, a heading per day, a handle on the right to scroll by
  * month. Tap opens one; a long press selects, for marking favourite,
- * filing in an album or sharing.
+ * filing in an album, sharing or deleting.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -108,6 +109,7 @@ fun Timeline(gallery: Gallery, photos: List<Photo>, open: (Int) -> Unit) {
     }
     val selected = remember { mutableStateListOf<Int>() }
     var filing by remember { mutableStateOf(false) }
+    var deleting by remember { mutableStateOf(false) }
     val grid = rememberLazyGridState()
     if (photos.isEmpty() && gallery.reading == null) {
         Box(Modifier.fillMaxSize().padding(24.dp)) {
@@ -132,6 +134,7 @@ fun Timeline(gallery: Gallery, photos: List<Photo>, open: (Int) -> Unit) {
                     }) { Icon(Icons.Filled.Star, "Favourite", tint = if (allFavorite) MaterialTheme.colorScheme.primary else LocalContentColor.current.copy(alpha = 0.4f)) }
                     IconButton(onClick = { filing = true }) { Icon(Icons.Filled.Add, "Add to albums") }
                     IconButton(onClick = { val list = chosen(); scope.launch { share(context, list) } }) { Icon(Icons.Filled.Share, "Share") }
+                    IconButton(onClick = { deleting = true }) { Icon(Icons.Filled.Delete, "Delete") }
                 }
             }
         }
@@ -165,6 +168,26 @@ fun Timeline(gallery: Gallery, photos: List<Photo>, open: (Int) -> Unit) {
                 (cells.getOrNull(j) as? Cell.Pic)?.let { monthLabel(photos[it.index].day) } ?: ""
             })
         }
+    }
+    if (deleting) {
+        val n = selected.size
+        AlertDialog(
+            onDismissRequest = { deleting = false },
+            title = { Text(if (n == 1) "Delete this photo?" else "Delete $n photos?") },
+            text = { Text("They're deleted from their library on every device that holds it. Copies still on this phone stay there.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    deleting = false
+                    val list = selected.map { photos[it] }
+                    scope.launch {
+                        val err = core { Core.deletePhotos(JSONArray(list.map { it.ref() }).toString()) }
+                        selected.clear()
+                        if (err.isEmpty()) gallery.remove(list) else { gallery.error = err; gallery.load() }
+                    }
+                }) { Text("Delete", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = { TextButton(onClick = { deleting = false }) { Text("Cancel") } },
+        )
     }
     if (filing) AlbumPicker(gallery, onDismiss = { filing = false }) { albums ->
         filing = false

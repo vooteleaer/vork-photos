@@ -1261,6 +1261,7 @@ fn context_items(s: &mut State, at: Option<(f32, f32)>) -> Vec<(i32, &'static st
                 items.push((app::ID_COVER, "Make the album's cover", false));
             }
         }
+        items.push((app::ID_DELETE, "Delete…", false));
         items.push((0, "", false));
     }
     items.push((app::ID_SELECT_ALL, "Select all", false));
@@ -1457,6 +1458,10 @@ unsafe extern "system" fn proc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPA
             let ctrl = GetKeyState(VK_CONTROL.0 as i32) < 0;
             if ctrl && vk.0 == b'A' as u16 {
                 app::command(app::ID_SELECT_ALL);
+                return LRESULT(0);
+            }
+            if vk == VK_DELETE {
+                app::command(app::ID_DELETE);
                 return LRESULT(0);
             }
             match app::with(|s| key_down(s, vk)) {

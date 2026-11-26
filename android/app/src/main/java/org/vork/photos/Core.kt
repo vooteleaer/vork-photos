@@ -35,6 +35,8 @@ object Core {
     external fun renameAlbum(libraries: String, from: String, to: String): String
     /** Moves `photos` (`[{ns, id}]`) into library `to`: content by reference, out of where they were. */
     external fun movePhotos(photos: String, to: String): String
+    /** Deletes `photos` (`[{ns, id}]`) from their libraries, on every device. */
+    external fun deletePhotos(photos: String): String
     /** Moves every photo of album `name` in `libraries` into library `to`. */
     external fun moveAlbum(libraries: String, name: String, to: String): String
     /** `{library: change count}`: reload when they differ. */

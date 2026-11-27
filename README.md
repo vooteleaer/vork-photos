@@ -1,8 +1,8 @@
 # vØrk Photos
 
-Photos on [vØrk storage](https://github.com/vooteleaer/vork), in the spirit of Immich: every picture in your libraries, wherever they came from (a phone, a mount, Explorer, an app), encrypted and synced like everything else.
+Photos on [vØrk storage](https://github.com/vooteleaer/vork-storage), in the spirit of Immich: every picture in your libraries, wherever they came from (a phone, a mount, Explorer, an app), encrypted and synced like everything else.
 
-> A demo app of [vØrk storage](https://github.com/vooteleaer/vork), the storage that runs on top of the vØrk network. To try it, start with [getting started](https://github.com/vooteleaer/vork/blob/main/docs/storage/getting-started.md). ADR numbers here are vØrk storage's ([docs/storage/adr](https://github.com/vooteleaer/vork/tree/main/docs/storage/adr)).
+> A demo app of [vØrk storage](https://github.com/vooteleaer/vork-storage), the storage that runs on top of the vØrk network. To try it, start with [getting started](https://github.com/vooteleaer/vork-storage/blob/main/docs/getting-started.md). ADR numbers here are vØrk storage's ([docs/adr](https://github.com/vooteleaer/vork-storage/tree/main/docs/adr)).
 
 - **Timeline:** every photo by month, newest first, as square thumbnails. The thumbnails are blocks the extractor keeps with each photo (ADR-0026), so a device shows the grid without fetching originals.
 - **Favourites** (`favorite = true`, a star in every vØrk storage app), **albums** (a name on its photos: `album` is a name or a list of them, so a photo is in any number of albums, in whichever libraries; an album can be moved to another library with all its photos; file views show them under `Albums/`), **people**: your contacts (ADR-0024), with their profile photos, and the photos they're tagged in (`person:<contact id>`).

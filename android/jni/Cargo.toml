@@ -14,4 +14,4 @@ crate-type = ["cdylib"]
 vork-photos-core = { path = "../../core" }
 jni = { version = "0.21", default-features = false }
 serde_json = "1"
-libvork = { path = "../../../vork/crates/libvork" }
+libvork = { path = "../../../vork-storage/crates/libvork" }

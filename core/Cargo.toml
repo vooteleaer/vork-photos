@@ -7,7 +7,7 @@ license.workspace = true
 publish.workspace = true
 
 [dependencies]
-libvork = { path = "../../vork/crates/libvork" }
+libvork = { path = "../../vork-storage/crates/libvork" }
 # Describing a picture imported here, as the extractor would (ADR-0023, ADR-0026).
-vork-extract = { path = "../../vork/crates/vork-extract" }
+vork-extract = { path = "../../vork-storage/crates/vork-extract" }
 tokio = { version = "1", features = ["rt"] }
